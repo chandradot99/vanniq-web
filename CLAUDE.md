@@ -5,11 +5,11 @@
 **Backend repo:** `github.com/chandradot99/vaaniq` (FastAPI, runs on port 8000)
 **This repo:** `github.com/chandradot99/vaaniq-web` (Next.js, runs on port 3000)
 
----
+## Active Feature Work
 
-## What This Is
+**→ Read [`PLAN.md`](./PLAN.md) before touching anything in `features/agents/`**
 
-The frontend for Vaaniq — an open source AI agent platform. Businesses build and deploy agents for voice, chat, and WhatsApp using a visual graph editor.
+The visual agent builder (React Flow canvas) is in progress. PLAN.md has the full implementation status, file map, backend API contract, and known issues.
 
 ---
 
@@ -20,111 +20,159 @@ The frontend for Vaaniq — an open source AI agent platform. Businesses build a
 | Next.js 15 (App Router) | Framework + routing |
 | TypeScript | Type safety |
 | Tailwind CSS v4 | Styling |
-| shadcn/ui | Component library (Radix UI based, copy-paste into `components/ui/`) |
+| `@base-ui/react` | Component primitives (used by all `components/ui/` files) |
 | React Flow (`@xyflow/react`) | Visual graph editor for agent builder |
 | TanStack Query | Server state / API calls |
 | Zustand + persist | Client state (auth tokens, UI state) |
-| Node.js 25 (via nvm) | Runtime — always use `nvm use 25.8.0` |
+| pnpm 10 | Package manager — always use `pnpm`, never npm |
+| Node.js 25 (via nvm) | Runtime — `.nvmrc` set to 25.8.0, run `nvm use` |
 
 ---
 
 ## Project Structure
 
 ```
-app/
-  (auth)/           ← login, register — no sidebar
+app/                         ← Next.js routing ONLY — pages are thin shells
+  (auth)/                    ← no sidebar, redirects to /agents if authenticated
     login/page.tsx
     register/page.tsx
-  (dashboard)/      ← protected pages — sidebar layout
-    layout.tsx      ← sidebar nav
-    agents/page.tsx
-    api-keys/page.tsx
-  layout.tsx        ← root layout (Providers, fonts)
-  page.tsx          ← redirects to /agents
-  providers.tsx     ← QueryClient + Toaster
+  (dashboard)/               ← protected — redirects to /login if not authenticated
+    layout.tsx               ← auth guard + <AppSidebar />, overflow-hidden (React Flow needs this)
+    agents/
+      page.tsx               ← <AgentsList />
+      new/page.tsx           ← <CreateAgentForm />
+      [id]/page.tsx          ← <AgentDetail agentId={params.id} />
+    api-keys/page.tsx        ← <ApiKeysList />
+  layout.tsx                 ← root layout (fonts, Providers)
+  page.tsx                   ← redirects to /agents
+  providers.tsx              ← ThemeProvider + QueryClient + Toaster
+
+features/                    ← ALL business logic lives here (feature-based architecture)
+  agents/
+    api.ts                   ← agentsApi: list, getById, create, update, updateGraph, delete
+    hooks/use-agents.ts      ← useAgents, useAgent, useCreateAgent, useUpdateAgent, useUpdateGraph, useDeleteAgent
+    utils/graph-transform.ts ← toFlowGraph(), toGraphConfig(), NODE_LABELS/COLORS/DEFAULT_CONFIGS
+    components/
+      agents-list.tsx
+      agent-card.tsx         ← Link to /agents/[id], delete stops propagation
+      create-agent-form.tsx  ← name + language only; on success → /agents/[id]
+      agent-detail.tsx       ← loading state + <GraphEditor>
+      graph/                 ← React Flow visual editor (see PLAN.md for full file list)
+        graph-editor.tsx
+        graph-editor-header.tsx
+        agent-node.tsx
+        node-palette.tsx
+        node-config-panel.tsx
+        config-forms/        ← one form per node type (10 files + index.ts)
+  api-keys/
+    api.ts
+    constants.ts             ← SERVICES list, getServiceLabel()
+    hooks/use-api-keys.ts
+    components/
+      api-keys-list.tsx
+      api-key-row.tsx
+  auth/
+    components/
+      login-form.tsx
+      register-form.tsx
 
 components/
-  ui/               ← shadcn components (never edit manually)
+  ui/                        ← shared UI primitives (built on @base-ui/react)
+  layout/
+    app-sidebar.tsx
+    theme-toggle.tsx
 
 lib/
-  api.ts            ← base fetch client (reads access_token from localStorage)
-  utils.ts          ← cn() helper
+  api.ts                     ← base fetch client (reads access_token from localStorage)
+  utils.ts                   ← cn() helper
 
 store/
-  auth.ts           ← Zustand auth store (tokens, user, logout)
+  auth.ts                    ← Zustand auth store (_hasHydrated, accessToken, setTokens, logout)
 
 types/
-  index.ts          ← shared TypeScript types mirroring backend schemas
+  index.ts                   ← TypeScript types mirroring backend schemas (Agent, GraphConfig, etc.)
 ```
+
+### Where to put new code
+
+| What | Where |
+|---|---|
+| New page | `app/(dashboard)/feature-name/page.tsx` — thin shell only |
+| Page content | `features/feature-name/components/` |
+| TanStack Query hooks | `features/feature-name/hooks/use-feature.ts` |
+| API call functions | `features/feature-name/api.ts` |
+| Shared across features | `components/layout/` or `components/ui/` |
 
 ---
 
 ## API Client
 
-All API calls go through `lib/api.ts`. It:
-- Reads `access_token` from localStorage automatically
-- Throws `ApiError(status, message)` on non-2xx
-- Returns `undefined` on 204
+All calls go through `lib/api.ts` — reads `access_token` from localStorage, throws `ApiError(status, message)` on non-2xx.
 
 ```ts
-import { api, ApiError } from "@/lib/api";
-
-const agents = await api.get<Agent[]>("/v1/agents");
-await api.post("/v1/agents", { name: "Bot" });
-await api.delete(`/v1/agents/${id}`);
+import { api } from "@/lib/api";
+api.get("/v1/agents")
+api.post("/v1/agents", { name: "Bot" })
+api.patch(`/v1/agents/${id}`, { name: "New" })
+api.put(`/v1/agents/${id}/graph`, graphConfig)
+api.delete(`/v1/agents/${id}`)
 ```
 
-Backend base URL comes from `NEXT_PUBLIC_API_URL` in `.env.local` (default: `http://localhost:8000`).
+Backend base URL: `NEXT_PUBLIC_API_URL` in `.env.local` (default: `http://localhost:8000`).
 
 ---
 
 ## Auth Flow
 
-Tokens stored in Zustand + `localStorage` (via `persist` middleware).
-- `useAuthStore().setTokens(access, refresh, orgId, role)` — call after login/register
-- `useAuthStore().logout()` — clears state + localStorage
-- `localStorage.getItem("access_token")` — read by `lib/api.ts` automatically
-
-No middleware-based route protection yet — add `middleware.ts` when needed.
+Zustand + `localStorage` via `persist` middleware.
+- `_hasHydrated` flag (set via `onRehydrateStorage`) — check this before reading auth state in components
+- Dashboard layout redirects to `/login` if `!hasHydrated || !accessToken`
+- Auth layout redirects to `/agents` if already authenticated
 
 ---
 
-## Adding shadcn Components
+## Adding UI Components
 
-```bash
-npx shadcn@latest add <component>
-```
+**Do NOT use `pnpm dlx shadcn@latest add`** — the CLI requires Node 20+ but the project runs Node 18. Build components manually using `@base-ui/react` primitives (same pattern as existing `components/ui/` files). See `components/ui/switch.tsx` as an example of a hand-built component.
 
-Never edit files in `components/ui/` manually — they're managed by shadcn.
+---
+
+## Layout Rules
+
+- Dashboard `<main>` is `overflow-hidden` — required for React Flow to fill viewport
+- Pages that need scrolling must add `overflow-auto` to their own outermost container
+- The graph editor uses `h-full flex flex-col` / `flex-1 min-h-0` to fill the viewport
 
 ---
 
 ## Running Locally
 
 ```bash
-nvm use 25.8.0
-npm run dev      # http://localhost:3000
+nvm use          # picks up .nvmrc → Node 25.8.0
+pnpm dev         # http://localhost:3000
 ```
 
-Backend must be running on port 8000:
+Backend on port 8000:
 ```bash
-# In vaaniq/ repo:
-uv run uvicorn vaaniq.server.main:app --reload
+cd ../Vaaniq && uv run uvicorn vaaniq.server.main:app --reload
 ```
 
 ---
 
 ## Key Conventions
 
-- All pages under `(dashboard)/` have the sidebar layout — add new pages there
-- All pages under `(auth)/` have the centered card layout
-- Use TanStack Query for all server state — `useQuery` to fetch, `useMutation` to write
-- Use `toast.success()` / `toast.error()` from `sonner` for user feedback
-- Types in `types/index.ts` mirror the backend Pydantic response schemas exactly
+- Pages are thin shells — all logic and UI in `features/`
+- TanStack Query for all server state — `useQuery` to fetch, `useMutation` to write
+- `toast.success()` / `toast.error()` from `sonner` for user feedback
+- Types in `types/index.ts` mirror backend Pydantic schemas exactly
+- `isDirty` / setState tracking: never call `setState` synchronously inside `useEffect` (lint error) — wrap event handlers instead
+- **After every change: run `pnpm lint` and fix all errors before considering the task done**
 
 ## What NOT To Do
 
-- **Don't commit or push unless the user explicitly asks**
-- **Don't edit `components/ui/` files** — use `npx shadcn@latest add` instead
-- **Don't use `localStorage` directly outside of `lib/api.ts` and `store/auth.ts`**
-- **Don't add API routes** — this app has no backend; all data comes from the FastAPI server
+- **Don't commit or push unless explicitly asked**
+- **Don't use npm or npx** — always `pnpm` / `pnpm dlx`
+- **Don't use `pnpm dlx shadcn@latest add`** — Node 18 incompatible; build manually
+- **Don't call `setState` synchronously inside `useEffect`** — triggers lint error `react-hooks/set-state-in-effect`
+- **Don't use `localStorage` directly** outside of `lib/api.ts` and `store/auth.ts`
+- **Don't add API routes** — no backend here; all data from FastAPI server

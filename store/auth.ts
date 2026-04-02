@@ -8,6 +8,9 @@ interface AuthState {
   user: UserResponse | null;
   orgId: string | null;
   role: string | null;
+  /** True once Zustand has rehydrated this store from localStorage. */
+  _hasHydrated: boolean;
+  _setHasHydrated: (value: boolean) => void;
   setTokens: (access: string, refresh: string, orgId: string, role: string) => void;
   setUser: (user: UserResponse) => void;
   logout: () => void;
@@ -22,6 +25,8 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       orgId: null,
       role: null,
+      _hasHydrated: false,
+      _setHasHydrated: (value) => set({ _hasHydrated: value }),
 
       setTokens: (access, refresh, orgId, role) => {
         if (typeof window !== "undefined") {
@@ -49,6 +54,11 @@ export const useAuthStore = create<AuthState>()(
         orgId: state.orgId,
         role: state.role,
       }),
+      onRehydrateStorage: () => (state) => {
+        // Called once localStorage hydration is done — sets _hasHydrated in the store
+        // so components can react via useAuthStore without any useState/useEffect
+        state?._setHasHydrated(true);
+      },
     }
   )
 );
