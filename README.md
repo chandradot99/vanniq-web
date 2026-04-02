@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Vaaniq Web
+
+The frontend for [Vaaniq](https://github.com/chandradot99/vaaniq) — an open source AI agent platform. Build and deploy agents for voice calls, web chat, and WhatsApp using a visual drag-and-drop graph editor.
+
+## Features
+
+- **Visual agent builder** — drag-and-drop graph editor powered by React Flow
+- **Multi-channel** — voice, chat, and WhatsApp from one interface
+- **BYOK management** — bring and manage your own API keys for every provider
+- **Live session debugger** — watch your agent think in real time
+
+## Tech Stack
+
+- [Next.js 15](https://nextjs.org) (App Router)
+- [TypeScript](https://www.typescriptlang.org)
+- [Tailwind CSS v4](https://tailwindcss.com)
+- [shadcn/ui](https://ui.shadcn.com)
+- [React Flow](https://reactflow.dev)
+- [TanStack Query](https://tanstack.com/query)
+- [Zustand](https://zustand-demo.pmnd.rs)
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 25+ (via [nvm](https://github.com/nvm-sh/nvm))
+- pnpm 10+
+- [Vaaniq backend](https://github.com/chandradot99/vaaniq) running on port 8000
+
+### Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+# 1. Clone
+git clone git@github.com:chandradot99/vanniq-web.git
+cd vanniq-web
+
+# 2. Use correct Node version
+nvm use
+
+# 3. Install dependencies
+pnpm install
+
+# 4. Configure environment
+cp .env.example .env.local
+# Edit .env.local — set NEXT_PUBLIC_API_URL if your backend runs elsewhere
+
+# 5. Start dev server
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable | Default | Description |
+|---|---|---|
+| `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | URL of the Vaaniq backend API |
 
-## Learn More
+## Backend
 
-To learn more about Next.js, take a look at the following resources:
+This frontend requires the [Vaaniq backend](https://github.com/chandradot99/vaaniq). See that repo for setup instructions.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## License
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
