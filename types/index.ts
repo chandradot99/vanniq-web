@@ -59,19 +59,31 @@ export interface Agent {
   updated_at: string;
 }
 
-// ── API Keys ──────────────────────────────────────────────────────────────────
+// ── Integrations ──────────────────────────────────────────────────────────────
 
-export interface ApiKey {
+export interface Integration {
   id: string;
   org_id: string;
-  service: string;
-  key_hint: string;
-  last_tested_at: string | null;
+  provider: string;
+  category: string;
+  display_name: string;
+  config: Record<string, unknown>;
+  status: string;
+  meta: Record<string, unknown>;
   created_at: string;
 }
 
-export interface TestApiKeyResponse {
+export interface TestIntegrationResponse {
   valid: boolean;
   tested: boolean;
   error: string | null;
+}
+
+// ── Tools ─────────────────────────────────────────────────────────────────────
+
+export interface ToolInfo {
+  name: string;
+  description: string;
+  input_schema: Record<string, unknown>;
+  required_integration: string | null;
 }

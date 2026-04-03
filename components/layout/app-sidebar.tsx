@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { AudioLines, Bot, Key, LogOut, PanelLeftClose, PanelLeftOpen, Moon, Sun } from "lucide-react";
+import { AudioLines, Bot, Plug, LogOut, PanelLeftClose, PanelLeftOpen, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/store/auth";
 import { api } from "@/lib/api";
@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/agents", label: "Agents", icon: Bot },
-  { href: "/api-keys", label: "API Keys", icon: Key },
+  { href: "/integrations", label: "Integrations", icon: Plug },
 ];
 
 interface SidebarItemProps {
