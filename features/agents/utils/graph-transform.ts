@@ -6,6 +6,7 @@ export type NodeType =
   | "inbound_message"
   | "llm_response"
   | "condition"
+  | "human_review"
   | "collect_data"
   | "set_variable"
   | "http_request"
@@ -19,6 +20,7 @@ export const NODE_LABELS: Record<NodeType, string> = {
   inbound_message: "Inbound Message",
   llm_response: "LLM Response",
   condition: "Condition",
+  human_review: "Human Review",
   collect_data: "Collect Data",
   set_variable: "Set Variable",
   http_request: "HTTP Request",
@@ -33,6 +35,7 @@ export const NODE_COLORS: Record<NodeType, string> = {
   inbound_message: "sky",
   llm_response: "violet",
   condition: "amber",
+  human_review: "yellow",
   collect_data: "blue",
   set_variable: "teal",
   http_request: "orange",
@@ -48,6 +51,7 @@ export const NODE_COLOR_CLASSES: Record<NodeType, { border: string; bg: string; 
   inbound_message: { border: "border-sky-500/60", bg: "bg-sky-500/10", icon: "text-sky-500" },
   llm_response: { border: "border-violet-500/60", bg: "bg-violet-500/10", icon: "text-violet-500" },
   condition: { border: "border-amber-500/60", bg: "bg-amber-500/10", icon: "text-amber-500" },
+  human_review: { border: "border-yellow-500/60", bg: "bg-yellow-500/10", icon: "text-yellow-600" },
   collect_data: { border: "border-blue-500/60", bg: "bg-blue-500/10", icon: "text-blue-500" },
   set_variable: { border: "border-teal-500/60", bg: "bg-teal-500/10", icon: "text-teal-500" },
   http_request: { border: "border-orange-500/60", bg: "bg-orange-500/10", icon: "text-orange-500" },
@@ -85,6 +89,8 @@ export function toFlowGraph(config: GraphConfig): { nodes: AgentFlowNode[]; edge
     id: e.id,
     source: e.source,
     target: e.target,
+    // condition maps to the source handle ID on condition/human_review nodes
+    sourceHandle: e.condition ?? null,
     type: "smoothstep",
     markerEnd: { type: MarkerType.ArrowClosed },
     data: e.condition ? { condition: e.condition } : undefined,
@@ -108,12 +114,16 @@ export function toGraphConfig(
     config: n.data.config,
   }));
 
-  const backendEdges: GraphEdge[] = edges.map((e) => ({
-    id: e.id,
-    source: e.source,
-    target: e.target,
-    ...(e.data?.condition ? { condition: e.data.condition as string } : {}),
-  }));
+  const backendEdges: GraphEdge[] = edges.map((e) => {
+    // sourceHandle is the route label on condition/human_review edges; serialize back to condition
+    const condition = (e.sourceHandle as string | null | undefined) || (e.data?.condition as string | undefined);
+    return {
+      id: e.id,
+      source: e.source,
+      target: e.target,
+      ...(condition ? { condition } : {}),
+    };
+  });
 
   return {
     entry_point: entryNode?.id ?? "",
@@ -127,6 +137,7 @@ export const DEFAULT_NODE_CONFIGS: Record<NodeType, Record<string, unknown>> = {
   inbound_message: {},
   llm_response: { instructions: "", rag_enabled: false, tools: [] },
   condition: { router_prompt: "", routes: [] },
+  human_review: { message: "Please review and approve this action.", context_variable: "" },
   collect_data: { fields: [] },
   set_variable: { key: "", value: "" },
   http_request: { method: "GET", url: "", headers: {}, timeout_seconds: 30 },

@@ -15,6 +15,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   MessageCircle,
+  UserCheck,
 } from "lucide-react";
 import type { NodeType } from "../../utils/graph-transform";
 import { NODE_LABELS, NODE_COLOR_CLASSES } from "../../utils/graph-transform";
@@ -23,6 +24,7 @@ const PALETTE_NODES: NodeType[] = [
   "inbound_message",
   "llm_response",
   "condition",
+  "human_review",
   "collect_data",
   "set_variable",
   "http_request",
@@ -37,6 +39,7 @@ const PALETTE_ICONS: Record<NodeType, React.ElementType> = {
   inbound_message: MessageCircle,
   llm_response: Brain,
   condition: GitBranch,
+  human_review: UserCheck,
   collect_data: ClipboardList,
   set_variable: Variable,
   http_request: Globe,

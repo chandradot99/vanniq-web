@@ -1,5 +1,6 @@
 export { LlmResponseForm } from "./llm-response-form";
 export { ConditionForm } from "./condition-form";
+export { HumanReviewForm } from "./human-review-form";
 export { CollectDataForm } from "./collect-data-form";
 export { SetVariableForm } from "./set-variable-form";
 export { HttpRequestForm } from "./http-request-form";

@@ -14,14 +14,18 @@ import {
   Search,
   Zap,
   Trash2,
+  UserCheck,
+  MessageCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { AgentNodeData, NodeType } from "../../utils/graph-transform";
 import { NODE_LABELS, NODE_COLOR_CLASSES } from "../../utils/graph-transform";
 
 const NODE_ICONS: Record<NodeType, React.ElementType> = {
+  inbound_message: MessageCircle,
   llm_response: Brain,
   condition: GitBranch,
+  human_review: UserCheck,
   collect_data: ClipboardList,
   set_variable: Variable,
   http_request: Globe,
@@ -54,6 +58,10 @@ function getConfigPreview(nodeType: NodeType, config: Record<string, unknown>): 
       return (config.farewell_message as string) || "Default farewell";
     case "rag_search":
       return `top_k=${config.top_k ?? 5}, min_score=${config.min_score ?? 0.7}`;
+    case "human_review":
+      return (config.message as string) || "Waiting for approval";
+    case "inbound_message":
+      return "Waits for user message";
     case "post_session_action": {
       const actions = config.actions as string[] | undefined;
       return actions?.length ? actions.join(", ") : "No actions configured";
@@ -77,7 +85,14 @@ export const AgentNode = memo(function AgentNode({ id, data, selected }: AgentNo
   const preview = getConfigPreview(nodeType, config);
   const isTerminal = nodeType === "end_session";
   const isCondition = nodeType === "condition";
-  const routes = isCondition ? (config.routes as Array<{ label: string }> | undefined) ?? [] : [];
+  const isHumanReview = nodeType === "human_review";
+  const isMultiRoute = isCondition || isHumanReview;
+  // condition: user-configured routes; human_review: always approve + reject
+  const routes = isCondition
+    ? (config.routes as Array<{ label: string }> | undefined) ?? []
+    : isHumanReview
+      ? [{ label: "approve" }, { label: "reject" }]
+      : [];
 
   const { deleteElements, setNodes } = useReactFlow();
 
@@ -109,11 +124,11 @@ export const AgentNode = memo(function AgentNode({ id, data, selected }: AgentNo
         ${selected ? "shadow-lg ring-2 ring-primary/30" : "hover:shadow-md"}
       `}
     >
-      {/* Top target handle */}
+      {/* Left target handle — all nodes except the entry point */}
       {!isEntryPoint && (
         <Handle
           type="target"
-          position={Position.Top}
+          position={Position.Left}
           className="!h-3 !w-3 !border-2 !border-border !bg-background hover:!bg-primary"
         />
       )}
@@ -171,32 +186,33 @@ export const AgentNode = memo(function AgentNode({ id, data, selected }: AgentNo
         )}
       </div>
 
-      {/* Bottom source handle — condition node gets one handle per route, others get one */}
-      {!isTerminal && !isCondition && (
+      {/* Right source handle(s) — multi-route nodes get one labeled handle per route */}
+      {!isTerminal && !isMultiRoute && (
         <Handle
           type="source"
-          position={Position.Bottom}
+          position={Position.Right}
           className="!h-3 !w-3 !border-2 !border-border !bg-background hover:!bg-primary"
         />
       )}
 
-      {isCondition && routes.length === 0 && (
+      {isMultiRoute && routes.length === 0 && (
         <Handle
           type="source"
-          position={Position.Bottom}
+          position={Position.Right}
           className="!h-3 !w-3 !border-2 !border-border !bg-background hover:!bg-primary"
         />
       )}
 
-      {isCondition && routes.length > 0 &&
+      {isMultiRoute && routes.length > 0 &&
         routes.map((route, i) => (
           <Handle
             key={route.label}
             type="source"
-            position={Position.Bottom}
+            position={Position.Right}
             id={route.label}
-            style={{ left: `${((i + 1) / (routes.length + 1)) * 100}%` }}
+            style={{ top: `${((i + 1) / (routes.length + 1)) * 100}%` }}
             className="!h-3 !w-3 !border-2 !border-border !bg-background hover:!bg-primary"
+            title={route.label}
           />
         ))}
     </div>

@@ -6,6 +6,7 @@ import { NODE_LABELS, NODE_COLOR_CLASSES } from "../../utils/graph-transform";
 import {
   LlmResponseForm,
   ConditionForm,
+  HumanReviewForm,
   CollectDataForm,
   SetVariableForm,
   HttpRequestForm,
@@ -59,6 +60,7 @@ export function NodeConfigPanel({ node, onUpdate, onClose }: Props) {
       <div className="flex-1 overflow-y-auto p-4">
         {nodeType === "llm_response" && <LlmResponseForm {...formProps} />}
         {nodeType === "condition" && <ConditionForm {...formProps} />}
+        {nodeType === "human_review" && <HumanReviewForm {...formProps} />}
         {nodeType === "collect_data" && <CollectDataForm {...formProps} />}
         {nodeType === "set_variable" && <SetVariableForm {...formProps} />}
         {nodeType === "http_request" && <HttpRequestForm {...formProps} />}

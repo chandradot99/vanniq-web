@@ -70,11 +70,6 @@ export function GraphEditorHeader({ agent, isDirty, isSaving, isChatOpen, onSave
           </button>
         )}
 
-        {agent.simple_mode && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 font-medium">
-            Simple mode — will switch to advanced on save
-          </span>
-        )}
       </div>
 
       <div className="flex items-center gap-2">

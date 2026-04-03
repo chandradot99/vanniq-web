@@ -73,6 +73,8 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
 
   const onConnect = useCallback(
     (connection: Connection) => {
+      // sourceHandle is the route label on condition/human_review nodes.
+      // Preserve it in edge data so toGraphConfig() can serialize it as `condition`.
       setEdges((eds) =>
         addEdge(
           {
@@ -80,6 +82,10 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
             id: nanoid(8),
             type: "smoothstep",
             markerEnd: { type: MarkerType.ArrowClosed },
+            label: connection.sourceHandle ?? undefined,
+            data: connection.sourceHandle
+              ? { condition: connection.sourceHandle }
+              : undefined,
           },
           eds,
         ),
@@ -143,9 +149,17 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
     );
   }
 
+  function validateGraph(): string | null {
+    if (nodes.length === 0) return "Add at least one node before saving";
+    const hasEntry = nodes.some((n) => n.data.isEntryPoint);
+    if (!hasEntry) return "Set an entry point node (click ↑ on a node)";
+    return null;
+  }
+
   function handleSave() {
-    if (nodes.length === 0) {
-      toast.error("Add at least one node before saving");
+    const validationError = validateGraph();
+    if (validationError) {
+      toast.error(validationError);
       return;
     }
     const graphConfig = toGraphConfig(nodes, edges);
