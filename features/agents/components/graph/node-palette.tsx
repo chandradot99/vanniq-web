@@ -20,19 +20,36 @@ import {
 import type { NodeType } from "../../utils/graph-transform";
 import { NODE_LABELS, NODE_COLOR_CLASSES } from "../../utils/graph-transform";
 
-const PALETTE_NODES: NodeType[] = [
-  "inbound_message",
-  "llm_response",
-  "condition",
-  "human_review",
-  "collect_data",
-  "set_variable",
-  "http_request",
-  "run_tool",
-  "transfer_human",
-  "end_session",
-  "rag_search",
-  "post_session_action",
+interface PaletteCategory {
+  label: string;
+  nodes: NodeType[];
+}
+
+const PALETTE_CATEGORIES: PaletteCategory[] = [
+  {
+    label: "Input",
+    nodes: ["inbound_message"],
+  },
+  {
+    label: "Logic",
+    nodes: ["llm_response", "condition", "collect_data", "set_variable"],
+  },
+  {
+    label: "Human-in-the-Loop",
+    nodes: ["human_review"],
+  },
+  {
+    label: "Actions",
+    nodes: ["run_tool", "http_request", "transfer_human"],
+  },
+  {
+    label: "Data",
+    nodes: ["rag_search"],
+  },
+  {
+    label: "Session",
+    nodes: ["end_session", "post_session_action"],
+  },
 ];
 
 const PALETTE_ICONS: Record<NodeType, React.ElementType> = {
@@ -80,29 +97,53 @@ export function NodePalette() {
       </div>
 
       {/* Node list */}
-      <div className={`flex-1 overflow-y-auto ${collapsed ? "p-1.5 space-y-1" : "p-3 space-y-1"}`}>
-        {PALETTE_NODES.map((nodeType) => {
-          const colors = NODE_COLOR_CLASSES[nodeType];
-          const Icon = PALETTE_ICONS[nodeType];
-          return (
-            <div
-              key={nodeType}
-              draggable
-              onDragStart={(e) => onDragStart(e, nodeType)}
-              title={collapsed ? NODE_LABELS[nodeType] : undefined}
-              className={`flex items-center rounded-lg border border-border/50 bg-background cursor-grab active:cursor-grabbing hover:border-primary/30 hover:bg-accent transition-all duration-150 select-none ${
-                collapsed ? "justify-center p-1.5" : "gap-2.5 px-3 py-2"
-              }`}
-            >
-              <div className={`h-6 w-6 rounded ${colors.bg} flex items-center justify-center shrink-0`}>
-                <Icon className={`h-3 w-3 ${colors.icon}`} />
+      <div className={`flex-1 overflow-y-auto ${collapsed ? "p-1.5 space-y-1" : "py-3 space-y-4"}`}>
+        {collapsed ? (
+          // Collapsed: flat icon list, no categories
+          PALETTE_CATEGORIES.flatMap((cat) => cat.nodes).map((nodeType) => {
+            const colors = NODE_COLOR_CLASSES[nodeType];
+            const Icon = PALETTE_ICONS[nodeType];
+            return (
+              <div
+                key={nodeType}
+                draggable
+                onDragStart={(e) => onDragStart(e, nodeType)}
+                title={NODE_LABELS[nodeType]}
+                className="flex items-center justify-center rounded-lg border border-border/50 bg-background cursor-grab active:cursor-grabbing hover:border-primary/30 hover:bg-accent transition-all duration-150 select-none p-1.5"
+              >
+                <div className={`h-6 w-6 rounded ${colors.bg} flex items-center justify-center shrink-0`}>
+                  <Icon className={`h-3 w-3 ${colors.icon}`} />
+                </div>
               </div>
-              {!collapsed && (
-                <span className="text-xs font-medium leading-tight">{NODE_LABELS[nodeType]}</span>
-              )}
+            );
+          })
+        ) : (
+          // Expanded: categorized sections
+          PALETTE_CATEGORIES.map((category) => (
+            <div key={category.label} className="px-3 space-y-1">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-1 pb-0.5">
+                {category.label}
+              </p>
+              {category.nodes.map((nodeType) => {
+                const colors = NODE_COLOR_CLASSES[nodeType];
+                const Icon = PALETTE_ICONS[nodeType];
+                return (
+                  <div
+                    key={nodeType}
+                    draggable
+                    onDragStart={(e) => onDragStart(e, nodeType)}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-border/50 bg-background cursor-grab active:cursor-grabbing hover:border-primary/30 hover:bg-accent transition-all duration-150 select-none"
+                  >
+                    <div className={`h-6 w-6 rounded ${colors.bg} flex items-center justify-center shrink-0`}>
+                      <Icon className={`h-3 w-3 ${colors.icon}`} />
+                    </div>
+                    <span className="text-xs font-medium leading-tight">{NODE_LABELS[nodeType]}</span>
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
+          ))
+        )}
       </div>
     </div>
   );
