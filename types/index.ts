@@ -52,6 +52,7 @@ export interface GraphEdge {
   target: string;
   condition?: string;
   goto?: boolean;
+  goto_node_position?: { x: number; y: number };
 }
 
 export interface Guard {

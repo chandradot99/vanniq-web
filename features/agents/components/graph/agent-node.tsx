@@ -19,8 +19,9 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import type { AgentNodeData, NodeType } from "../../utils/graph-transform";
-import { NODE_LABELS, NODE_COLOR_CLASSES } from "../../utils/graph-transform";
+import type { AgentNodeData, NodeType, TurnVisit } from "../../utils/graph-transform";
+import { NODE_LABELS, NODE_COLOR_CLASSES, getNodeConfigError } from "../../utils/graph-transform";
+import { useToolSchemas } from "./tool-schemas-context";
 
 function formatMs(ms: number | null): string | null {
   if (ms == null) return null;
@@ -91,19 +92,44 @@ interface AgentNodeProps {
 }
 
 export const AgentNode = memo(function AgentNode({ id, data, selected }: AgentNodeProps) {
+  const toolSchemas = useToolSchemas();
   const { nodeType, config, isEntryPoint, execution, isExecutionMode } = data;
+  const turnsVisited = (data.turnsVisited as TurnVisit[] | undefined) ?? [];
   const colors = NODE_COLOR_CLASSES[nodeType] ?? NODE_COLOR_CLASSES.group;
   const Icon = NODE_ICONS[nodeType] ?? MessageCircle;
   const label = data.label || NODE_LABELS[nodeType];
   const preview = getConfigPreview(nodeType, config);
+  const configError = !isExecutionMode ? getNodeConfigError(nodeType, config, toolSchemas) : null;
   const isTerminal = nodeType === "end_session";
   const isCondition = nodeType === "condition";
   const isHumanReview = nodeType === "human_review";
   const isMultiRoute = isCondition || isHumanReview;
 
   // Execution overlay state
-  const executionRing = execution ? (EXECUTION_RING[execution.status] ?? "") : "";
-  const dimmed = isExecutionMode && !execution;
+  // Multi-turn mode: derive ring from turnsVisited; single-turn: use execution status
+  const isMultiTurn = turnsVisited.length > 0;
+  const dimmed = isExecutionMode && !execution && !isMultiTurn;
+
+  // True when this node is only a goto target (not yet executed in any turn)
+  const isAllPointedTo = isMultiTurn && turnsVisited.every((v) => v.status === "pointed_to");
+
+  // Ring: for multi-turn use last turn's color (errors always red)
+  const multiTurnRingStyle = isMultiTurn
+    ? (() => {
+        const hasError = turnsVisited.some((v) => v.status === "error");
+        const hasInterrupt = turnsVisited.some((v) => v.status === "interrupted");
+        const color = hasError ? "#ef4444" : hasInterrupt ? "#f59e0b" : turnsVisited[turnsVisited.length - 1].color;
+        if (isAllPointedTo) {
+          return { outline: `2px dashed ${color}`, outlineOffset: "2px", opacity: 0.65 };
+        }
+        return { boxShadow: `0 0 0 1px hsl(var(--background)), 0 0 0 3px ${color}` };
+      })()
+    : undefined;
+  const executionRing = !isMultiTurn && execution ? (EXECUTION_RING[execution.status] ?? "") : "";
+
+  // Footer stats: multi-turn shows last turn's data; single shows execution
+  const footerExec = isMultiTurn ? null : execution;
+  const lastTurnVisit = isMultiTurn ? turnsVisited[turnsVisited.length - 1] : null;
   // condition: user-configured routes; human_review: always approve + reject
   const routes = isCondition
     ? (config.routes as Array<{ label: string }> | undefined) ?? []
@@ -113,12 +139,21 @@ export const AgentNode = memo(function AgentNode({ id, data, selected }: AgentNo
 
   const updateNodeInternals = useUpdateNodeInternals();
 
+  // Stable key covering both route count and labels — renaming a route must also
+  // trigger re-registration so React Flow picks up the new handle id.
+  const routeKey = routes.map((r) => r.label).join(",");
+
   // Re-register handles with React Flow whenever routes change OR when this node
   // is re-mounted (e.g. after being assigned to a group). Without this, dynamic
   // handles on condition/human_review nodes cause error #008 during edge validation.
+  // We call updateNodeInternals twice: immediately after render AND after a
+  // short timeout, because React Flow sometimes needs an extra frame to measure
+  // the new handle DOM positions before they become connectable.
   useEffect(() => {
     updateNodeInternals(id);
-  }, [id, updateNodeInternals, routes.length, data.nodeType]);
+    const t = setTimeout(() => updateNodeInternals(id), 50);
+    return () => clearTimeout(t);
+  }, [id, updateNodeInternals, routeKey, data.nodeType]);
 
   const { deleteElements, setNodes } = useReactFlow();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -150,12 +185,49 @@ export const AgentNode = memo(function AgentNode({ id, data, selected }: AgentNo
         ${executionRing}
         ${dimmed ? "opacity-30 grayscale" : ""}
       `}
+      style={multiTurnRingStyle}
     >
-      {/* Execution order badge */}
-      {execution && (
+      {/* Config error indicator — shown in builder mode only */}
+      {configError && (
+        <div
+          className="absolute -top-2 -left-2 h-4 w-4 rounded-full bg-red-500 flex items-center justify-center shadow z-10"
+          title={configError}
+        >
+          <span className="text-white text-[9px] font-bold leading-none">!</span>
+        </div>
+      )}
+
+      {/* Single-turn execution order badge */}
+      {!isMultiTurn && execution && (
         <div className={`absolute -top-2.5 -right-2.5 h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shadow z-10
           ${execution.status === "error" ? "bg-red-500" : execution.status === "interrupted" ? "bg-amber-500" : "bg-emerald-500"}`}>
           {execution.order}
+        </div>
+      )}
+
+      {/* Multi-turn visit dots — one per turn, showing turn number */}
+      {isMultiTurn && (
+        <div className="absolute -top-2.5 -right-1 flex gap-0.5 z-10">
+          {turnsVisited.map((tv) => {
+            const isPointedTo = tv.status === "pointed_to";
+            const dotColor = tv.status === "error" ? "#ef4444" : tv.status === "interrupted" ? "#f59e0b" : tv.color;
+            return (
+              <div
+                key={tv.turn}
+                className="h-4 w-4 rounded-full flex items-center justify-center text-[8px] font-bold shadow"
+                style={isPointedTo
+                  ? { border: `2px dashed ${dotColor}`, color: dotColor, backgroundColor: "transparent" }
+                  : { backgroundColor: dotColor, color: "#fff" }
+                }
+                title={isPointedTo
+                  ? `Entry point for next turn (T${tv.turn + 1})`
+                  : `Turn ${tv.turn + 1} · step ${tv.order}${tv.duration_ms != null ? ` · ${tv.duration_ms < 1000 ? `${tv.duration_ms}ms` : `${(tv.duration_ms / 1000).toFixed(1)}s`}` : ""}${tv.tokens ? ` · ${tv.tokens} tok` : ""}`
+                }
+              >
+                {tv.turn + 1}
+              </div>
+            );
+          })}
         </div>
       )}
       {/* Left target handle — all nodes except the entry point */}
@@ -230,22 +302,42 @@ export const AgentNode = memo(function AgentNode({ id, data, selected }: AgentNo
             Terminal
           </Badge>
         )}
-        {execution?.duration_ms != null && (
+        {/* Single-turn: duration + tokens from execution */}
+        {footerExec?.duration_ms != null && (
           <Badge variant="outline" className={`text-[9px] px-1.5 py-0 h-4 ml-auto
-            ${execution.status === "error" ? "text-red-500 border-red-500/30" :
-              execution.status === "interrupted" ? "text-amber-500 border-amber-500/30" :
+            ${footerExec.status === "error" ? "text-red-500 border-red-500/30" :
+              footerExec.status === "interrupted" ? "text-amber-500 border-amber-500/30" :
               "text-emerald-600 border-emerald-500/30"}`}>
-            {formatMs(execution.duration_ms)}
+            {formatMs(footerExec.duration_ms)}
           </Badge>
         )}
-        {execution?.tokens != null && execution.tokens > 0 && (
+        {footerExec?.tokens != null && footerExec.tokens > 0 && (
           <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 text-violet-500 border-violet-500/30">
-            {execution.tokens} tok
+            {footerExec.tokens} tok
           </Badge>
         )}
-        {execution?.status === "error" && (
-          <p className="text-[9px] text-red-500 truncate w-full mt-0.5" title={execution.error ?? ""}>
-            {execution.error?.split("\n").pop() ?? "Error"}
+        {footerExec?.status === "error" && (
+          <p className="text-[9px] text-red-500 truncate w-full mt-0.5" title={footerExec.error ?? ""}>
+            {footerExec.error?.split("\n").pop() ?? "Error"}
+          </p>
+        )}
+        {/* Multi-turn: last turn's duration + any error */}
+        {lastTurnVisit?.duration_ms != null && (
+          <Badge variant="outline" className={`text-[9px] px-1.5 py-0 h-4 ml-auto
+            ${lastTurnVisit.status === "error" ? "text-red-500 border-red-500/30" :
+              lastTurnVisit.status === "interrupted" ? "text-amber-500 border-amber-500/30" :
+              "text-muted-foreground border-border"}`}>
+            {formatMs(lastTurnVisit.duration_ms)}
+          </Badge>
+        )}
+        {lastTurnVisit?.tokens != null && lastTurnVisit.tokens > 0 && (
+          <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 text-violet-500 border-violet-500/30">
+            {lastTurnVisit.tokens} tok
+          </Badge>
+        )}
+        {lastTurnVisit?.status === "error" && (
+          <p className="text-[9px] text-red-500 truncate w-full mt-0.5" title={lastTurnVisit.error ?? ""}>
+            {lastTurnVisit.error?.split("\n").pop() ?? "Error"}
           </p>
         )}
       </div>

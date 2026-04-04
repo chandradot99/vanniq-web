@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import {
+  Play,
   Brain,
   GitBranch,
   ClipboardList,
@@ -28,6 +29,10 @@ interface PaletteCategory {
 }
 
 const PALETTE_CATEGORIES: PaletteCategory[] = [
+  {
+    label: "Entry",
+    nodes: ["start"],
+  },
   {
     label: "Input",
     nodes: ["inbound_message"],
@@ -63,6 +68,7 @@ const PALETTE_CATEGORIES: PaletteCategory[] = [
 ];
 
 const PALETTE_ICONS: Partial<Record<NodeType, React.ElementType>> = {
+  start: Play,
   group: Layers,
   goto: CornerUpLeft,
   inbound_message: MessageCircle,

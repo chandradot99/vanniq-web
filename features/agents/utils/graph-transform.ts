@@ -3,6 +3,7 @@ import type { GraphConfig, GraphNode, GraphEdge, GraphGroup } from "@/types";
 import { MarkerType } from "@xyflow/react";
 
 export type NodeType =
+  | "start"
   | "inbound_message"
   | "llm_response"
   | "condition"
@@ -18,7 +19,62 @@ export type NodeType =
   | "group"
   | "goto";
 
+interface ToolSchemaLike {
+  name: string;
+  input_schema: Record<string, unknown>;
+}
+
+/** Returns a short error string if the node has a misconfiguration, null if OK. */
+export function getNodeConfigError(
+  nodeType: NodeType,
+  config: Record<string, unknown>,
+  toolSchemas?: ToolSchemaLike[],
+): string | null {
+  switch (nodeType) {
+    case "condition": {
+      if (!config.router_prompt) return "Router prompt is required";
+      const routes = config.routes as Array<unknown> | undefined;
+      if (!routes?.length) return "At least one route is required";
+      return null;
+    }
+    case "collect_data": {
+      const fields = config.fields as Array<unknown> | undefined;
+      if (!fields?.length) return "At least one field is required";
+      return null;
+    }
+    case "run_tool": {
+      const toolName = config.tool as string | undefined;
+      if (!toolName) return "No tool selected";
+      if (toolSchemas) {
+        const schema = toolSchemas.find((t) => t.name === toolName);
+        if (schema) {
+          const required = schema.input_schema?.required ?? [];
+          const inputMap = (config.input as Record<string, unknown>) ?? {};
+          const missing = required.filter((f) => !inputMap[f]);
+          if (missing.length > 0) return `Missing required inputs: ${missing.join(", ")}`;
+        }
+      }
+      return null;
+    }
+    case "http_request": {
+      if (!config.url) return "URL is required";
+      return null;
+    }
+    case "set_variable": {
+      if (!config.key) return "Variable key is required";
+      return null;
+    }
+    case "transfer_human": {
+      if (!config.transfer_number) return "Transfer number is required";
+      return null;
+    }
+    default:
+      return null;
+  }
+}
+
 export const NODE_LABELS: Record<NodeType, string> = {
+  start: "Start",
   group: "Group",
   goto: "Go To",
   inbound_message: "Inbound Message",
@@ -36,6 +92,7 @@ export const NODE_LABELS: Record<NodeType, string> = {
 };
 
 export const NODE_COLORS: Record<NodeType, string> = {
+  start: "emerald",
   group: "slate",
   goto: "indigo",
   inbound_message: "sky",
@@ -54,6 +111,7 @@ export const NODE_COLORS: Record<NodeType, string> = {
 
 // Tailwind color classes for each node type
 export const NODE_COLOR_CLASSES: Record<NodeType, { border: string; bg: string; icon: string }> = {
+  start: { border: "border-emerald-500/60", bg: "bg-emerald-500/10", icon: "text-emerald-500" },
   group: { border: "border-slate-400/40", bg: "bg-slate-500/5", icon: "text-slate-500" },
   goto: { border: "border-indigo-500/60", bg: "bg-indigo-500/10", icon: "text-indigo-500" },
   inbound_message: { border: "border-sky-500/60", bg: "bg-sky-500/10", icon: "text-sky-500" },
@@ -78,6 +136,18 @@ export interface NodeExecutionOverlay {
   tokens?: number;
 }
 
+/** One visit to a node within a specific conversation turn (used in multi-turn "All" view). */
+export interface TurnVisit {
+  turn: number;          // 0-based turn index
+  color: string;         // CSS hex color for this turn
+  order: number;         // step position within the turn
+  duration_ms: number | null;
+  /** "pointed_to" = goto target for this turn (not yet executed, starts next turn) */
+  status: "success" | "error" | "interrupted" | "pointed_to";
+  error: string | null;
+  tokens?: number;
+}
+
 export interface AgentNodeData {
   nodeType: NodeType;
   label: string;           // user-editable display name, defaults to NODE_LABELS[nodeType]
@@ -85,6 +155,8 @@ export interface AgentNodeData {
   isEntryPoint: boolean;
   // Execution overlay — only present in read-only execution view
   execution?: NodeExecutionOverlay | null;
+  /** Multi-turn overlay: one entry per turn that visited this node (all-turns mode). */
+  turnsVisited?: TurnVisit[];
   isExecutionMode?: boolean;
   [key: string]: unknown;
 }
@@ -93,7 +165,11 @@ export type AgentFlowNode = Node<AgentNodeData>;
 export type AgentFlowEdge = Edge;
 
 // Convert backend GraphConfig → React Flow nodes/edges
-export function toFlowGraph(config: GraphConfig): { nodes: AgentFlowNode[]; edges: AgentFlowEdge[]; viewport?: { x: number; y: number; zoom: number } } {
+export function toFlowGraph(
+  config: GraphConfig,
+  options?: { showGotoLinks?: boolean },
+): { nodes: AgentFlowNode[]; edges: AgentFlowEdge[]; viewport?: { x: number; y: number; zoom: number } } {
+  const showGotoLinks = options?.showGotoLinks ?? false;
   // Reconstruct group nodes first (they must exist before children reference them)
   const groupNodes: AgentFlowNode[] = (config.groups ?? []).map((g) => ({
     id: g.id,
@@ -141,10 +217,18 @@ export function toFlowGraph(config: GraphConfig): { nodes: AgentFlowNode[]; edge
       const absY = (sourceNode?.position.y ?? 0) + (sourceParent?.position.y ?? 0);
 
       const gotoNodeId = `goto_${e.id}`;
+      // If the source node is inside a group, the goto node must also be a child
+      // of that group (with a relative position) so it moves with the group.
+      const gotoParentId = sourceNode?.parentId ?? undefined;
+      const defaultGotoPos = gotoParentId
+        ? { x: (sourceNode?.position.x ?? 0) + 280, y: sourceNode?.position.y ?? 0 }
+        : { x: absX + 280, y: absY };
+
       gotoNodes.push({
         id: gotoNodeId,
         type: "gotoNode",
-        position: { x: absX + 280, y: absY },
+        position: e.goto_node_position ?? defaultGotoPos,
+        ...(gotoParentId ? { parentId: gotoParentId, extent: "parent" as const } : {}),
         data: {
           nodeType: "goto",
           label: "Go To",
@@ -163,12 +247,28 @@ export function toFlowGraph(config: GraphConfig): { nodes: AgentFlowNode[]; edge
         label: e.condition,
         data: e.condition ? { condition: e.condition } : undefined,
       });
+
+      // Dashed edge from original source → real target (visual only, not saved back).
+      // Only shown in execution/debug mode — hidden in the builder to reduce clutter.
+      if (showGotoLinks) {
+        edges.push({
+          id: `${e.id}_goto_link`,
+          source: e.source,
+          target: e.target,
+          sourceHandle: e.condition ?? undefined,
+          type: "default",
+          animated: false,
+          style: { strokeDasharray: "6 3", opacity: 0.4 },
+          markerEnd: { type: MarkerType.ArrowClosed },
+        });
+      }
     } else {
       edges.push({
         id: e.id,
         source: e.source,
         target: e.target,
         sourceHandle: e.condition ?? undefined,
+        // Never set targetHandle — omitting it is correct; null causes React Flow error #008
         type: "default",
         markerEnd: { type: MarkerType.ArrowClosed },
         data: e.condition ? { condition: e.condition } : undefined,
@@ -177,7 +277,19 @@ export function toFlowGraph(config: GraphConfig): { nodes: AgentFlowNode[]; edge
     }
   }
 
-  return { nodes: [...allNodes, ...gotoNodes], edges, viewport: config.viewport };
+  // Sanitize edges: React Flow error #008 fires when targetHandle is null or the
+  // string "null" but no matching handle exists. Default handles have id=null which
+  // React Flow treats as "no specific handle". Stripping targetHandle entirely is safe.
+  const sanitizedEdges = edges.map((e) => {
+    if (e.targetHandle == null || e.targetHandle === "null") {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { targetHandle: _th, ...rest } = e;
+      return rest as AgentFlowEdge;
+    }
+    return e;
+  });
+
+  return { nodes: [...allNodes, ...gotoNodes], edges: sanitizedEdges, viewport: config.viewport };
 }
 
 // Convert React Flow nodes/edges → backend GraphConfig
@@ -221,10 +333,14 @@ export function toGraphConfig(
 
   const backendEdges: GraphEdge[] = [];
   for (const e of edges) {
+    // Skip synthetic goto link edges (visual only, not part of the real graph)
+    if (e.id.endsWith("_goto_link")) continue;
+
     const condition = (e.sourceHandle as string | null | undefined) || (e.data?.condition as string | undefined);
 
     if (gotoNodeIds.has(e.target)) {
-      // Edge points to a goto node — convert to a goto edge pointing at the real target
+      // Edge points to a goto node — convert to a goto edge pointing at the real target.
+      // Persist the goto node's current position so it's restored on reload.
       const gotoNode = nodes.find((n) => n.id === e.target);
       const realTarget = gotoNode?.data.config?.target as string | undefined;
       if (realTarget) {
@@ -234,6 +350,7 @@ export function toGraphConfig(
           target: realTarget,
           goto: true,
           ...(condition ? { condition } : {}),
+          ...(gotoNode?.position ? { goto_node_position: gotoNode.position } : {}),
         });
       }
     } else {
@@ -257,6 +374,7 @@ export function toGraphConfig(
 
 // Default empty config per node type
 export const DEFAULT_NODE_CONFIGS: Record<NodeType, Record<string, unknown>> = {
+  start: { system_message: "", greeting: "" },
   group: {},
   goto: { target: "" },
   inbound_message: {},

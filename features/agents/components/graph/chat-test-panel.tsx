@@ -14,25 +14,32 @@ interface HumanReviewPayload {
 
 interface Props {
   agentId: string;
+  isOpen: boolean;
   onClose: () => void;
 }
 
-export function ChatTestPanel({ agentId, onClose }: Props) {
+export function ChatTestPanel({ agentId, isOpen, onClose }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionEnded, setSessionEnded] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [starting, setStarting] = useState(true);
+  const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingReview, setPendingReview] = useState<HumanReviewPayload | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Tracks whether we have ever started a session for this panel instance.
+  // Prevents creating a new session each time the panel is opened/closed.
+  const hasStarted = useRef(false);
 
   useEffect(() => {
-    startSession();
+    if (isOpen && !hasStarted.current) {
+      hasStarted.current = true;
+      startSession();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isOpen]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -131,6 +138,24 @@ export function ChatTestPanel({ agentId, onClose }: Props) {
       setMessages((prev) =>
         prev.map((msg, i) =>
           i === streamingIndex ? { ...msg, content: msg.content + content } : msg,
+        ),
+      );
+    } else if (type === "node_message") {
+      // Debug message from a node error (never goes into state["messages"] so voice is safe).
+      // Shown only in the test panel as a distinct error notice.
+      const content = event.content as string;
+      const isError = event.is_error as boolean | undefined;
+      // Remove empty streaming placeholder — no tokens were streamed for this turn
+      setMessages((prev) => [
+        ...prev.filter((msg, i) => !(i === streamingIndex && msg.content === "")),
+        { role: "agent" as const, content: isError ? `⚠️ Node error: ${content}` : content },
+      ]);
+    } else if (type === "collect_question") {
+      // collect_data node is asking the user for a field value — show it as an agent message
+      const content = event.content as string;
+      setMessages((prev) =>
+        prev.map((msg, i) =>
+          i === streamingIndex ? { ...msg, content } : msg,
         ),
       );
     } else if (type === "human_review") {

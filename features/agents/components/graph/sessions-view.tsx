@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useAgentSessions, useSession, useSessionTimeline } from "../../hooks/use-agents";
 import { ExecutionGraphView } from "./execution-graph-view";
-import type { SessionSummary, ToolCallDetail, Agent } from "@/types";
+import type { SessionSummary, ToolCallDetail, Agent, TranscriptMessage } from "@/types";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -140,10 +140,11 @@ function ToolCallCard({ tc }: { tc: ToolCallDetail }) {
 
 // ── Execution graph tab ───────────────────────────────────────────────────────
 
-function ExecutionTab({ sessionId, graphConfig, sessionStatus }: {
+function ExecutionTab({ sessionId, graphConfig, sessionStatus, transcript }: {
   sessionId: string;
   graphConfig: Agent["graph_config"];
   sessionStatus: "active" | "ended";
+  transcript: TranscriptMessage[];
 }) {
   const { data: timeline, isLoading } = useSessionTimeline(sessionId);
 
@@ -183,6 +184,7 @@ function ExecutionTab({ sessionId, graphConfig, sessionStatus }: {
       graphConfig={graphConfig}
       timeline={timeline}
       sessionStatus={sessionStatus}
+      transcript={transcript}
     />
   );
 }
@@ -264,6 +266,7 @@ function SessionDetailPanel({ sessionId, graphConfig }: { sessionId: string; gra
           sessionId={sessionId}
           graphConfig={graphConfig}
           sessionStatus={session.status}
+          transcript={session.transcript}
         />
       ) : activeTab === "transcript" ? (
         <div className="flex-1 overflow-y-auto p-5 space-y-8">

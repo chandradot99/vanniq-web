@@ -21,6 +21,8 @@ interface GotoNodeProps {
  * - Clicking the arrow button pans to the target node without disorienting the user
  */
 export const GotoNode = memo(function GotoNode({ id, data, selected }: GotoNodeProps) {
+  const isExecutionMode = (data as Record<string, unknown>).isExecutionMode as boolean | undefined;
+  const executionTraversed = (data as Record<string, unknown>).executionTraversed as boolean | undefined;
   const { getNode, setCenter, deleteElements } = useReactFlow();
   const targetId = data.config?.target as string | undefined;
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -64,10 +66,12 @@ export const GotoNode = memo(function GotoNode({ id, data, selected }: GotoNodeP
   return (
     <div
       className={`
-        group flex items-center gap-2 pl-3 pr-2 py-2 rounded-full border bg-card shadow-sm
+        group relative flex items-center gap-2 pl-3 pr-2 py-2 rounded-full border bg-card shadow-sm
         transition-all duration-150 select-none
         border-indigo-500/50 bg-indigo-500/5
         ${selected ? "shadow-md ring-2 ring-indigo-400/40" : "hover:shadow-md hover:border-indigo-500/70"}
+        ${isExecutionMode && !executionTraversed ? "opacity-30 grayscale" : ""}
+        ${isExecutionMode && executionTraversed ? "ring-2 ring-emerald-500/60" : ""}
       `}
       style={{ minWidth: 160, maxWidth: 260 }}
     >
@@ -97,8 +101,9 @@ export const GotoNode = memo(function GotoNode({ id, data, selected }: GotoNodeP
         <p className="text-[9px] text-muted-foreground/60 font-mono">goto</p>
       </div>
 
-      {/* Actions — visible on hover */}
-      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+
+      {/* Actions — visible on hover, hidden in execution mode */}
+      <div className={`flex items-center gap-0.5 transition-opacity shrink-0 ${isExecutionMode ? "hidden" : "opacity-0 group-hover:opacity-100"}`}>
         {targetId && (
           <button
             onMouseDown={handleNavigate}

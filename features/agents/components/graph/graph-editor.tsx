@@ -25,6 +25,9 @@ import type { Agent } from "@/types";
 import { toFlowGraph, toGraphConfig, DEFAULT_NODE_CONFIGS, NODE_LABELS } from "../../utils/graph-transform";
 import type { AgentFlowNode, AgentFlowEdge, NodeType } from "../../utils/graph-transform";
 import { useUpdateGraph } from "../../hooks/use-agents";
+import { useTools } from "@/features/integrations/hooks/use-integrations";
+
+import { ToolSchemasContext } from "./tool-schemas-context";
 import { GraphEditorHeader } from "./graph-editor-header";
 import { NodePalette } from "./node-palette";
 import { NodeConfigPanel } from "./node-config-panel";
@@ -61,6 +64,7 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
   const [activeTab, setActiveTab] = useState<"builder" | "sessions">("builder");
 
   const updateGraphMutation = useUpdateGraph(agent.id);
+  const { data: toolSchemas = [] } = useTools();
 
   // Warn before reload/close if there are unsaved changes
   useEffect(() => {
@@ -77,7 +81,10 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
   const onNodesChange = useCallback<typeof onNodesChangeBase>(
     (changes) => {
       onNodesChangeBase(changes);
-      setIsDirty(true);
+      // "select" and "dimensions" are UI-only — not real graph edits
+      if (changes.some((c) => c.type !== "select" && c.type !== "dimensions")) {
+        setIsDirty(true);
+      }
     },
     [onNodesChangeBase],
   );
@@ -85,7 +92,10 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
   const onEdgesChange = useCallback<typeof onEdgesChangeBase>(
     (changes) => {
       onEdgesChangeBase(changes);
-      setIsDirty(true);
+      // "select" is UI-only — not a real graph edit
+      if (changes.some((c) => c.type !== "select")) {
+        setIsDirty(true);
+      }
     },
     [onEdgesChangeBase],
   );
@@ -129,9 +139,8 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
           addEdge(
             {
               source: connection.source,
-              sourceHandle: connection.sourceHandle ?? null,
+              sourceHandle: connection.sourceHandle ?? undefined,
               target: gotoId,
-              targetHandle: null,
               id: nanoid(8),
               type: "default",
               markerEnd: { type: MarkerType.ArrowClosed },
@@ -144,11 +153,14 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
         return;
       }
 
-      // Normal forward edge
+      // Normal forward edge — explicitly pick fields so targetHandle: null from
+      // the Connection object is never forwarded (React Flow treats null as "null" string)
       setEdges((eds) =>
         addEdge(
           {
-            ...connection,
+            source: connection.source,
+            sourceHandle: connection.sourceHandle ?? undefined,
+            target: connection.target,
             id: nanoid(8),
             type: "default",
             markerEnd: { type: MarkerType.ArrowClosed },
@@ -309,6 +321,7 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
         n.id === nodeId ? { ...n, data: { ...n.data, config } } : n,
       ),
     );
+    setIsDirty(true);
   }
 
   function updateNodeLabel(nodeId: string, label: string) {
@@ -378,6 +391,7 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) ?? null;
 
   return (
+    <ToolSchemasContext.Provider value={toolSchemas}>
     <div className="h-full flex flex-col">
       <GraphEditorHeader
         agent={agent}
@@ -421,6 +435,9 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
                 : { fitView: true, fitViewOptions: { padding: 0.2 } })}
               deleteKeyCode={["Backspace", "Delete"]}
               className="bg-background"
+              // Suppress error #008 — fires transiently before handle bounds are registered,
+              // and also when the entry-point node has no target handle (expected).
+              onError={(code) => { if (code === "008") return; console.warn(`ReactFlow error ${code}`); }}
             >
               <Background gap={20} size={1} className="opacity-30" />
               <Controls className="!border-border/60 !bg-card !shadow-none" />
@@ -447,15 +464,15 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
             </div>
           )}
 
-          {isChatOpen && (
-            <div className="absolute right-0 top-0 h-full z-20">
-              <ChatTestPanel agentId={agent.id} onClose={() => setIsChatOpen(false)} />
-            </div>
-          )}
+          {/* Always mounted so the session survives close/reopen without creating a ghost session */}
+          <div className={`absolute right-0 top-0 h-full z-20 ${isChatOpen ? "" : "hidden"}`}>
+            <ChatTestPanel agentId={agent.id} isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+          </div>
         </div>
       </div>
       )}
     </div>
+    </ToolSchemasContext.Provider>
   );
 }
 

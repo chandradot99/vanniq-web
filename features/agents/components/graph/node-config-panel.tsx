@@ -9,6 +9,7 @@ import type { AgentFlowNode, NodeType } from "../../utils/graph-transform";
 import { NODE_LABELS, NODE_COLOR_CLASSES } from "../../utils/graph-transform";
 import { GROUP_COLORS } from "./group-node";
 import {
+  StartForm,
   GotoForm,
   LlmResponseForm,
   ConditionForm,
@@ -137,6 +138,7 @@ export function NodeConfigPanel({ node, allNodes, onUpdate, onUpdateLabel, onClo
         )}
 
 
+        {!isGroup && !isGoto && nodeType === "start" && <StartForm {...formProps} />}
         {isGoto && (
           <GotoForm
             config={node.data.config}
