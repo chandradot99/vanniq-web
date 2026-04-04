@@ -29,6 +29,7 @@ import { GraphEditorHeader } from "./graph-editor-header";
 import { NodePalette } from "./node-palette";
 import { NodeConfigPanel } from "./node-config-panel";
 import { ChatTestPanel } from "./chat-test-panel";
+import { SessionsView } from "./sessions-view";
 import { AgentNode } from "./agent-node";
 import { GotoNode } from "./goto-node";
 import { GroupNode } from "./group-node";
@@ -57,6 +58,7 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"builder" | "sessions">("builder");
 
   const updateGraphMutation = useUpdateGraph(agent.id);
 
@@ -382,10 +384,15 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
         isDirty={isDirty}
         isSaving={updateGraphMutation.isPending}
         isChatOpen={isChatOpen}
+        activeTab={activeTab}
         onSave={handleSave}
         onToggleChat={() => setIsChatOpen((o) => !o)}
+        onTabChange={(tab) => { setActiveTab(tab); if (tab === "sessions") setIsChatOpen(false); }}
       />
 
+      {activeTab === "sessions" ? (
+        <SessionsView agent={agent} />
+      ) : (
       <div className="flex flex-1 min-h-0">
         <NodePalette />
 
@@ -447,6 +454,7 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }

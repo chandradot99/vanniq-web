@@ -22,6 +22,18 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { AgentNodeData, NodeType } from "../../utils/graph-transform";
 import { NODE_LABELS, NODE_COLOR_CLASSES } from "../../utils/graph-transform";
 
+function formatMs(ms: number | null): string | null {
+  if (ms == null) return null;
+  if (ms < 1000) return `${ms}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
+}
+
+const EXECUTION_RING: Record<string, string> = {
+  success:     "ring-2 ring-emerald-500 ring-offset-1 ring-offset-background",
+  error:       "ring-2 ring-red-500 ring-offset-1 ring-offset-background",
+  interrupted: "ring-2 ring-amber-500 ring-offset-1 ring-offset-background",
+};
+
 const NODE_ICONS: Partial<Record<NodeType, React.ElementType>> = {
   inbound_message: MessageCircle,
   llm_response: Brain,
@@ -79,7 +91,7 @@ interface AgentNodeProps {
 }
 
 export const AgentNode = memo(function AgentNode({ id, data, selected }: AgentNodeProps) {
-  const { nodeType, config, isEntryPoint } = data;
+  const { nodeType, config, isEntryPoint, execution, isExecutionMode } = data;
   const colors = NODE_COLOR_CLASSES[nodeType] ?? NODE_COLOR_CLASSES.group;
   const Icon = NODE_ICONS[nodeType] ?? MessageCircle;
   const label = data.label || NODE_LABELS[nodeType];
@@ -88,6 +100,10 @@ export const AgentNode = memo(function AgentNode({ id, data, selected }: AgentNo
   const isCondition = nodeType === "condition";
   const isHumanReview = nodeType === "human_review";
   const isMultiRoute = isCondition || isHumanReview;
+
+  // Execution overlay state
+  const executionRing = execution ? (EXECUTION_RING[execution.status] ?? "") : "";
+  const dimmed = isExecutionMode && !execution;
   // condition: user-configured routes; human_review: always approve + reject
   const routes = isCondition
     ? (config.routes as Array<{ label: string }> | undefined) ?? []
@@ -129,9 +145,19 @@ export const AgentNode = memo(function AgentNode({ id, data, selected }: AgentNo
       className={`
         group w-56 rounded-xl border bg-card shadow-sm transition-all duration-150
         ${colors.border}
-        ${selected ? "shadow-lg ring-2 ring-primary/30" : "hover:shadow-md"}
+        ${!isExecutionMode && selected ? "shadow-lg ring-2 ring-primary/30" : ""}
+        ${!isExecutionMode ? "hover:shadow-md" : ""}
+        ${executionRing}
+        ${dimmed ? "opacity-30 grayscale" : ""}
       `}
     >
+      {/* Execution order badge */}
+      {execution && (
+        <div className={`absolute -top-2.5 -right-2.5 h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shadow z-10
+          ${execution.status === "error" ? "bg-red-500" : execution.status === "interrupted" ? "bg-amber-500" : "bg-emerald-500"}`}>
+          {execution.order}
+        </div>
+      )}
       {/* Left target handle — all nodes except the entry point */}
       {!isEntryPoint && (
         <Handle
@@ -153,27 +179,29 @@ export const AgentNode = memo(function AgentNode({ id, data, selected }: AgentNo
           </div>
         </div>
 
-        <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-          {!isEntryPoint && (
-            <button
-              onMouseDown={handleSetEntryPoint}
-              className="h-5 w-5 rounded text-[9px] font-bold text-muted-foreground hover:text-green-500 hover:bg-green-500/10 flex items-center justify-center transition-colors"
-              title="Set as entry point"
-            >
-              ↑
-            </button>
-          )}
-          {!isEntryPoint && (
-            <button
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={handleDeleteClick}
-              className="h-5 w-5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex items-center justify-center transition-colors"
-              title="Delete node"
-            >
-              <Trash2 className="h-3 w-3" />
-            </button>
-          )}
-        </div>
+        {!isExecutionMode && (
+          <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            {!isEntryPoint && (
+              <button
+                onMouseDown={handleSetEntryPoint}
+                className="h-5 w-5 rounded text-[9px] font-bold text-muted-foreground hover:text-green-500 hover:bg-green-500/10 flex items-center justify-center transition-colors"
+                title="Set as entry point"
+              >
+                ↑
+              </button>
+            )}
+            {!isEntryPoint && (
+              <button
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={handleDeleteClick}
+                className="h-5 w-5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex items-center justify-center transition-colors"
+                title="Delete node"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        )}
 
         <ConfirmDialog
           open={confirmingDelete}
@@ -192,15 +220,33 @@ export const AgentNode = memo(function AgentNode({ id, data, selected }: AgentNo
 
       {/* Footer badges */}
       <div className="px-3 pb-3 flex items-center gap-1.5 flex-wrap">
-        {isEntryPoint && (
+        {isEntryPoint && !isExecutionMode && (
           <Badge className="text-[9px] px-1.5 py-0 h-4 font-semibold bg-green-500/15 text-green-600 border-green-500/30 border">
             Entry
           </Badge>
         )}
-        {isTerminal && (
+        {isTerminal && !isExecutionMode && (
           <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 text-muted-foreground">
             Terminal
           </Badge>
+        )}
+        {execution?.duration_ms != null && (
+          <Badge variant="outline" className={`text-[9px] px-1.5 py-0 h-4 ml-auto
+            ${execution.status === "error" ? "text-red-500 border-red-500/30" :
+              execution.status === "interrupted" ? "text-amber-500 border-amber-500/30" :
+              "text-emerald-600 border-emerald-500/30"}`}>
+            {formatMs(execution.duration_ms)}
+          </Badge>
+        )}
+        {execution?.tokens != null && execution.tokens > 0 && (
+          <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 text-violet-500 border-violet-500/30">
+            {execution.tokens} tok
+          </Badge>
+        )}
+        {execution?.status === "error" && (
+          <p className="text-[9px] text-red-500 truncate w-full mt-0.5" title={execution.error ?? ""}>
+            {execution.error?.split("\n").pop() ?? "Error"}
+          </p>
         )}
       </div>
 

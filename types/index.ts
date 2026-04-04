@@ -93,6 +93,78 @@ export interface TestIntegrationResponse {
   error: string | null;
 }
 
+// ── Sessions / Debugging ──────────────────────────────────────────────────────
+
+export interface SessionSummary {
+  id: string;
+  agent_id: string;
+  status: "active" | "ended";
+  channel: string;
+  message_count: number;
+  tool_call_count: number;
+  duration_seconds: number | null;
+  sentiment: string | null;
+  created_at: string;
+  ended_at: string | null;
+}
+
+export interface TranscriptMessage {
+  role: string;
+  content: string;
+  timestamp?: string;
+  node_id?: string;
+}
+
+export interface ToolCallDetail {
+  tool_name: string;
+  input: Record<string, unknown>;
+  output: unknown;
+  called_at: string;
+  success: boolean;
+}
+
+export interface SessionDetail {
+  id: string;
+  agent_id: string;
+  status: "active" | "ended";
+  channel: string;
+  duration_seconds: number | null;
+  sentiment: string | null;
+  summary: string | null;
+  meta: Record<string, unknown>;
+  transcript: TranscriptMessage[];
+  tool_calls: ToolCallDetail[];
+  created_at: string;
+  ended_at: string | null;
+}
+
+export interface SessionListResponse {
+  sessions: SessionSummary[];
+  total: number;
+}
+
+export interface SessionEvent {
+  id: string;
+  turn: number;
+  seq: number;
+  event_type: "node" | "llm" | "tool" | "error" | "interrupt";
+  name: string;
+  started_at: string;
+  ended_at: string | null;
+  duration_ms: number | null;
+  status: "success" | "error" | "interrupted";
+  data: Record<string, unknown>;
+  error: string | null;
+}
+
+export interface SessionTimeline {
+  session_id: string;
+  events: SessionEvent[];
+  total_turns: number;
+  total_llm_tokens: number;
+  total_duration_ms: number;
+}
+
 // ── Admin / Platform Configs ──────────────────────────────────────────────────
 
 export interface FieldSchema {

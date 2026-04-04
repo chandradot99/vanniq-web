@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import type { Agent, GraphNode, GraphEdge, Guard } from "@/types";
+import type { Agent, GraphNode, GraphEdge, Guard, SessionListResponse, SessionDetail, SessionTimeline } from "@/types";
 
 export interface CreateAgentInput {
   name: string;
@@ -42,6 +42,15 @@ export const chatApi = {
     api.post(`/v1/chat/${agentId}/start`),
   sendMessage: (sessionId: string, message: string): Promise<SendMessageResponse> =>
     api.post("/v1/chat/message", { session_id: sessionId, message }),
+};
+
+export const sessionsApi = {
+  listByAgent: (agentId: string, limit = 20, offset = 0): Promise<SessionListResponse> =>
+    api.get(`/v1/chat/agents/${agentId}/sessions?limit=${limit}&offset=${offset}`),
+  getById: (sessionId: string): Promise<SessionDetail> =>
+    api.get(`/v1/chat/sessions/${sessionId}`),
+  getTimeline: (sessionId: string): Promise<SessionTimeline> =>
+    api.get(`/v1/chat/sessions/${sessionId}/events`),
 };
 
 export const agentsApi = {

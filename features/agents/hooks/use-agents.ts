@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ApiError } from "@/lib/api";
 import type { Agent } from "@/types";
-import { agentsApi, type CreateAgentInput, type UpdateAgentInput, type UpdateGraphInput } from "../api";
+import { agentsApi, sessionsApi, type CreateAgentInput, type UpdateAgentInput, type UpdateGraphInput } from "../api";
 
 export function useAgents() {
   return useQuery({
@@ -54,6 +54,31 @@ export function useUpdateGraph(id: string) {
       toast.success("Graph saved");
     },
     onError: () => toast.error("Failed to save graph"),
+  });
+}
+
+export function useAgentSessions(agentId: string) {
+  return useQuery({
+    queryKey: ["sessions", agentId],
+    queryFn: () => sessionsApi.listByAgent(agentId),
+    enabled: !!agentId,
+    refetchInterval: 10_000, // poll every 10s to catch new sessions
+  });
+}
+
+export function useSession(sessionId: string | null) {
+  return useQuery({
+    queryKey: ["session", sessionId],
+    queryFn: () => sessionsApi.getById(sessionId!),
+    enabled: !!sessionId,
+  });
+}
+
+export function useSessionTimeline(sessionId: string | null) {
+  return useQuery({
+    queryKey: ["session-timeline", sessionId],
+    queryFn: () => sessionsApi.getTimeline(sessionId!),
+    enabled: !!sessionId,
   });
 }
 

@@ -2,22 +2,26 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Save, MessageSquare } from "lucide-react";
+import { ArrowLeft, Save, MessageSquare, Bug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Agent } from "@/types";
 import { useUpdateAgent } from "../../hooks/use-agents";
+
+type ActiveTab = "builder" | "sessions";
 
 interface Props {
   agent: Agent;
   isDirty: boolean;
   isSaving: boolean;
   isChatOpen: boolean;
+  activeTab: ActiveTab;
   onSave: () => void;
   onToggleChat: () => void;
+  onTabChange: (tab: ActiveTab) => void;
 }
 
-export function GraphEditorHeader({ agent, isDirty, isSaving, isChatOpen, onSave, onToggleChat }: Props) {
+export function GraphEditorHeader({ agent, isDirty, isSaving, isChatOpen, activeTab, onSave, onToggleChat, onTabChange }: Props) {
   const [editValue, setEditValue] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const updateAgent = useUpdateAgent(agent.id);
@@ -72,28 +76,57 @@ export function GraphEditorHeader({ agent, isDirty, isSaving, isChatOpen, onSave
 
       </div>
 
+      {/* Tabs */}
+      <div className="flex items-center border border-border rounded-md overflow-hidden">
+        <button
+          onClick={() => onTabChange("builder")}
+          className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+            activeTab === "builder"
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground hover:bg-accent"
+          }`}
+        >
+          Builder
+        </button>
+        <button
+          onClick={() => onTabChange("sessions")}
+          className={`px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
+            activeTab === "sessions"
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground hover:bg-accent"
+          }`}
+        >
+          <Bug className="h-3 w-3" />
+          Sessions
+        </button>
+      </div>
+
       <div className="flex items-center gap-2">
-        {isDirty && (
+        {activeTab === "builder" && isDirty && (
           <span className="text-xs text-muted-foreground">Unsaved changes</span>
         )}
-        <Button
-          size="sm"
-          variant={isChatOpen ? "default" : "outline"}
-          onClick={onToggleChat}
-          className="h-8"
-        >
-          <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
-          Test Chat
-        </Button>
-        <Button
-          size="sm"
-          onClick={onSave}
-          disabled={isSaving || !isDirty}
-          className="h-8"
-        >
-          <Save className="h-3.5 w-3.5 mr-1.5" />
-          {isSaving ? "Saving…" : "Save"}
-        </Button>
+        {activeTab === "builder" && (
+          <>
+            <Button
+              size="sm"
+              variant={isChatOpen ? "default" : "outline"}
+              onClick={onToggleChat}
+              className="h-8"
+            >
+              <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+              Test Chat
+            </Button>
+            <Button
+              size="sm"
+              onClick={onSave}
+              disabled={isSaving || !isDirty}
+              className="h-8"
+            >
+              <Save className="h-3.5 w-3.5 mr-1.5" />
+              {isSaving ? "Saving…" : "Save"}
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );

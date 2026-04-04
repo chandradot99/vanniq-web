@@ -70,11 +70,22 @@ export const NODE_COLOR_CLASSES: Record<NodeType, { border: string; bg: string; 
   post_session_action: { border: "border-purple-500/60", bg: "bg-purple-500/10", icon: "text-purple-500" },
 };
 
+export interface NodeExecutionOverlay {
+  order: number;
+  duration_ms: number | null;
+  status: "success" | "error" | "interrupted";
+  error: string | null;
+  tokens?: number;
+}
+
 export interface AgentNodeData {
   nodeType: NodeType;
   label: string;           // user-editable display name, defaults to NODE_LABELS[nodeType]
   config: Record<string, unknown>;
   isEntryPoint: boolean;
+  // Execution overlay — only present in read-only execution view
+  execution?: NodeExecutionOverlay | null;
+  isExecutionMode?: boolean;
   [key: string]: unknown;
 }
 
