@@ -1,5 +1,5 @@
 import type { Node, Edge } from "@xyflow/react";
-import type { GraphConfig, GraphNode, GraphEdge } from "@/types";
+import type { GraphConfig, GraphNode, GraphEdge, GraphGroup } from "@/types";
 import { MarkerType } from "@xyflow/react";
 
 export type NodeType =
@@ -14,9 +14,13 @@ export type NodeType =
   | "transfer_human"
   | "end_session"
   | "rag_search"
-  | "post_session_action";
+  | "post_session_action"
+  | "group"
+  | "goto";
 
 export const NODE_LABELS: Record<NodeType, string> = {
+  group: "Group",
+  goto: "Go To",
   inbound_message: "Inbound Message",
   llm_response: "LLM Response",
   condition: "Condition",
@@ -32,6 +36,8 @@ export const NODE_LABELS: Record<NodeType, string> = {
 };
 
 export const NODE_COLORS: Record<NodeType, string> = {
+  group: "slate",
+  goto: "indigo",
   inbound_message: "sky",
   llm_response: "violet",
   condition: "amber",
@@ -48,6 +54,8 @@ export const NODE_COLORS: Record<NodeType, string> = {
 
 // Tailwind color classes for each node type
 export const NODE_COLOR_CLASSES: Record<NodeType, { border: string; bg: string; icon: string }> = {
+  group: { border: "border-slate-400/40", bg: "bg-slate-500/5", icon: "text-slate-500" },
+  goto: { border: "border-indigo-500/60", bg: "bg-indigo-500/10", icon: "text-indigo-500" },
   inbound_message: { border: "border-sky-500/60", bg: "bg-sky-500/10", icon: "text-sky-500" },
   llm_response: { border: "border-violet-500/60", bg: "bg-violet-500/10", icon: "text-violet-500" },
   condition: { border: "border-amber-500/60", bg: "bg-amber-500/10", icon: "text-amber-500" },
@@ -64,6 +72,7 @@ export const NODE_COLOR_CLASSES: Record<NodeType, { border: string; bg: string; 
 
 export interface AgentNodeData {
   nodeType: NodeType;
+  label: string;           // user-editable display name, defaults to NODE_LABELS[nodeType]
   config: Record<string, unknown>;
   isEntryPoint: boolean;
   [key: string]: unknown;
@@ -73,67 +82,172 @@ export type AgentFlowNode = Node<AgentNodeData>;
 export type AgentFlowEdge = Edge;
 
 // Convert backend GraphConfig → React Flow nodes/edges
-export function toFlowGraph(config: GraphConfig): { nodes: AgentFlowNode[]; edges: AgentFlowEdge[] } {
+export function toFlowGraph(config: GraphConfig): { nodes: AgentFlowNode[]; edges: AgentFlowEdge[]; viewport?: { x: number; y: number; zoom: number } } {
+  // Reconstruct group nodes first (they must exist before children reference them)
+  const groupNodes: AgentFlowNode[] = (config.groups ?? []).map((g) => ({
+    id: g.id,
+    type: "groupNode",
+    position: g.position,
+    style: { width: g.width, height: g.height },
+    data: {
+      nodeType: "group" as NodeType,
+      label: g.label,
+      colorIndex: g.color_index,
+      config: {},
+      isEntryPoint: false,
+    },
+  }));
+
   const nodes: AgentFlowNode[] = config.nodes.map((n, index) => ({
     id: n.id,
     type: "agentNode",
     position: n.position ?? { x: 100 + index * 280, y: 200 },
+    // Restore parent relationship — child positions are already relative in the saved data
+    ...(n.parent_id ? { parentId: n.parent_id, extent: "parent" as const } : {}),
     data: {
       nodeType: n.type as NodeType,
+      label: n.label ?? NODE_LABELS[n.type as NodeType] ?? n.type,
       config: n.config,
       isEntryPoint: n.id === config.entry_point,
     },
   }));
 
-  const edges: AgentFlowEdge[] = config.edges.map((e) => ({
-    id: e.id,
-    source: e.source,
-    target: e.target,
-    // condition maps to the source handle ID on condition/human_review nodes
-    sourceHandle: e.condition ?? null,
-    type: "smoothstep",
-    markerEnd: { type: MarkerType.ArrowClosed },
-    data: e.condition ? { condition: e.condition } : undefined,
-    label: e.condition,
-  }));
+  // Groups must come first so React Flow renders them beneath their children
+  const allNodes = [...groupNodes, ...nodes];
 
-  return { nodes, edges };
+  // Convert edges: goto edges become a gotoNode + a forward edge to it
+  const gotoNodes: AgentFlowNode[] = [];
+  const edges: AgentFlowEdge[] = [];
+
+  for (const e of config.edges) {
+    if (e.goto) {
+      // Find source node to position the goto node just to its right
+      const sourceNode = allNodes.find((n) => n.id === e.source);
+      const sourceParent = sourceNode?.parentId
+        ? allNodes.find((n) => n.id === sourceNode.parentId)
+        : null;
+      const absX = (sourceNode?.position.x ?? 0) + (sourceParent?.position.x ?? 0);
+      const absY = (sourceNode?.position.y ?? 0) + (sourceParent?.position.y ?? 0);
+
+      const gotoNodeId = `goto_${e.id}`;
+      gotoNodes.push({
+        id: gotoNodeId,
+        type: "gotoNode",
+        position: { x: absX + 280, y: absY },
+        data: {
+          nodeType: "goto",
+          label: "Go To",
+          config: { target: e.target },
+          isEntryPoint: false,
+        },
+      });
+
+      edges.push({
+        id: e.id,
+        source: e.source,
+        target: gotoNodeId,
+        sourceHandle: e.condition ?? undefined,
+        type: "smoothstep",
+        markerEnd: { type: MarkerType.ArrowClosed },
+        label: e.condition,
+        data: e.condition ? { condition: e.condition } : undefined,
+      });
+    } else {
+      edges.push({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        sourceHandle: e.condition ?? undefined,
+        type: "smoothstep",
+        markerEnd: { type: MarkerType.ArrowClosed },
+        data: e.condition ? { condition: e.condition } : undefined,
+        label: e.condition,
+      });
+    }
+  }
+
+  return { nodes: [...allNodes, ...gotoNodes], edges, viewport: config.viewport };
 }
 
 // Convert React Flow nodes/edges → backend GraphConfig
 export function toGraphConfig(
   nodes: AgentFlowNode[],
   edges: AgentFlowEdge[],
-): { entry_point: string; nodes: GraphNode[]; edges: GraphEdge[] } {
-  const entryNode = nodes.find((n) => n.data.isEntryPoint) ?? nodes[0];
+  viewport?: { x: number; y: number; zoom: number },
+): { entry_point: string; nodes: GraphNode[]; edges: GraphEdge[]; groups: GraphGroup[]; viewport?: { x: number; y: number; zoom: number } } {
+  const gotoNodeIds = new Set(nodes.filter((n) => n.type === "gotoNode").map((n) => n.id));
 
-  const backendNodes: GraphNode[] = nodes.map((n) => ({
-    id: n.id,
-    type: n.data.nodeType,
-    position: n.position,
-    config: n.data.config,
-  }));
+  const entryNode =
+    nodes.find((n) => n.data.isEntryPoint && n.type !== "groupNode" && n.type !== "gotoNode") ??
+    nodes.find((n) => n.type !== "groupNode" && n.type !== "gotoNode");
 
-  const backendEdges: GraphEdge[] = edges.map((e) => {
-    // sourceHandle is the route label on condition/human_review edges; serialize back to condition
+  // Serialize group nodes into their own array (backend ignores them at runtime).
+  // After NodeResizer is used, dimensions land in node.width / node.height (not style),
+  // so we check both locations.
+  const groups: GraphGroup[] = nodes
+    .filter((n) => n.type === "groupNode")
+    .map((n) => ({
+      id: n.id,
+      label: (n.data.label as string) ?? "Group",
+      color_index: (n.data.colorIndex as number) ?? 0,
+      position: n.position,
+      width: (n.width as number) ?? (n.style?.width as number) ?? 400,
+      height: (n.height as number) ?? (n.style?.height as number) ?? 240,
+    }));
+
+  // Only serialize real agent nodes (not groups, not goto nodes)
+  const backendNodes: GraphNode[] = nodes
+    .filter((n) => n.type !== "groupNode" && n.type !== "gotoNode")
+    .map((n) => ({
+      id: n.id,
+      type: n.data.nodeType,
+      label: n.data.label,
+      position: n.position,
+      // preserve parent_id so child positions (which are relative) load correctly
+      ...(n.parentId ? { parent_id: n.parentId } : {}),
+      config: n.data.config,
+    }));
+
+  const backendEdges: GraphEdge[] = [];
+  for (const e of edges) {
     const condition = (e.sourceHandle as string | null | undefined) || (e.data?.condition as string | undefined);
-    return {
-      id: e.id,
-      source: e.source,
-      target: e.target,
-      ...(condition ? { condition } : {}),
-    };
-  });
+
+    if (gotoNodeIds.has(e.target)) {
+      // Edge points to a goto node — convert to a goto edge pointing at the real target
+      const gotoNode = nodes.find((n) => n.id === e.target);
+      const realTarget = gotoNode?.data.config?.target as string | undefined;
+      if (realTarget) {
+        backendEdges.push({
+          id: e.id,
+          source: e.source,
+          target: realTarget,
+          goto: true,
+          ...(condition ? { condition } : {}),
+        });
+      }
+    } else {
+      backendEdges.push({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        ...(condition ? { condition } : {}),
+      });
+    }
+  }
 
   return {
     entry_point: entryNode?.id ?? "",
     nodes: backendNodes,
     edges: backendEdges,
+    groups,
+    ...(viewport ? { viewport } : {}),
   };
 }
 
 // Default empty config per node type
 export const DEFAULT_NODE_CONFIGS: Record<NodeType, Record<string, unknown>> = {
+  group: {},
+  goto: { target: "" },
   inbound_message: {},
   llm_response: { instructions: "", rag_enabled: false, tools: [] },
   condition: { router_prompt: "", routes: [] },

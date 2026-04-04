@@ -1,3 +1,4 @@
+export { GotoForm } from "./goto-form";
 export { LlmResponseForm } from "./llm-response-form";
 export { ConditionForm } from "./condition-form";
 export { HumanReviewForm } from "./human-review-form";

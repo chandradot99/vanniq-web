@@ -1,15 +1,26 @@
 "use client";
 
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Props {
   config: Record<string, unknown>;
   onChange: (config: Record<string, unknown>) => void;
+  collectedVariables?: string[];
 }
 
-export function HumanReviewForm({ config, onChange }: Props) {
+const NONE_VALUE = "__none__";
+
+export function HumanReviewForm({ config, onChange, collectedVariables = [] }: Props) {
+  const contextVariable = (config.context_variable as string) ?? "";
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -28,17 +39,36 @@ export function HumanReviewForm({ config, onChange }: Props) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="context_variable">Context variable (optional)</Label>
-        <Input
-          id="context_variable"
-          placeholder="e.g. email_body"
-          className="text-sm font-mono"
-          value={(config.context_variable as string) ?? ""}
-          onChange={(e) => onChange({ ...config, context_variable: e.target.value })}
-        />
-        <p className="text-xs text-muted-foreground">
-          Name of a collected field to show alongside the approval request — helps the reviewer understand what they&apos;re approving.
-        </p>
+        <Label>Show context variable (optional)</Label>
+        {collectedVariables.length === 0 ? (
+          <p className="text-xs text-muted-foreground italic">
+            No collected fields yet — add a Collect Data node upstream.
+          </p>
+        ) : (
+          <>
+            <Select
+              value={contextVariable || NONE_VALUE}
+              onValueChange={(v) =>
+                onChange({ ...config, context_variable: v === NONE_VALUE ? "" : v })
+              }
+            >
+              <SelectTrigger className="text-sm">
+                <SelectValue placeholder="None" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE_VALUE}>None</SelectItem>
+                {collectedVariables.map((v) => (
+                  <SelectItem key={v} value={v}>
+                    <span className="font-mono">{`{{collected.${v}}}`}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Value is shown alongside the approval message so the reviewer knows what they&apos;re approving.
+            </p>
+          </>
+        )}
       </div>
 
       <div className="rounded-lg border border-border/60 bg-muted/30 p-3 space-y-1">

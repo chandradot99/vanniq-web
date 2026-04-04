@@ -56,15 +56,22 @@ export function CollectDataForm({ config, onChange }: Props) {
       {fields.length === 0 && (
         <p className="text-xs text-muted-foreground">No fields defined.</p>
       )}
+      {fields.length > 0 && (
+        <div className="rounded-md bg-muted/50 px-3 py-2">
+          <p className="text-[10px] text-muted-foreground">
+            Fields are stored as <span className="font-mono">{"{{collected.field_name}}"}</span> — use these in Run Tool inputs, HTTP Request bodies, and Human Review messages.
+          </p>
+        </div>
+      )}
 
       {fields.map((field, i) => (
         <div key={i} className="rounded-lg border border-border/60 p-3 space-y-2">
           <div className="flex items-center gap-2">
             <Input
-              placeholder="Field name"
-              className="h-7 text-xs flex-1"
+              placeholder="field_name"
+              className="h-7 text-xs flex-1 font-mono"
               value={field.name}
-              onChange={(e) => updateField(i, { name: e.target.value })}
+              onChange={(e) => updateField(i, { name: e.target.value.replace(/\s+/g, "_").toLowerCase() })}
             />
             <Select value={field.type} onValueChange={(v) => updateField(i, { type: v })}>
               <SelectTrigger className="h-7 text-xs w-24">

@@ -24,12 +24,25 @@ export interface GraphConfig {
   nodes: GraphNode[];
   edges: GraphEdge[];
   guards?: Guard[];
+  groups?: GraphGroup[];
+  viewport?: { x: number; y: number; zoom: number };
+}
+
+export interface GraphGroup {
+  id: string;
+  label: string;
+  color_index: number;
+  position: { x: number; y: number };
+  width: number;
+  height: number;
 }
 
 export interface GraphNode {
   id: string;
   type: string;
+  label?: string;
   position?: { x: number; y: number };
+  parent_id?: string;
   config: Record<string, unknown>;
 }
 
@@ -38,6 +51,7 @@ export interface GraphEdge {
   source: string;
   target: string;
   condition?: string;
+  goto?: boolean;
 }
 
 export interface Guard {

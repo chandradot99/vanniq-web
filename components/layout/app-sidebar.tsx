@@ -51,7 +51,7 @@ function SidebarItem({ icon: Icon, label, collapsed, active, onClick, href }: Si
 }
 
 export function AppSidebar() {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const pathname = usePathname();
   const router = useRouter();
   const { logout, refreshToken } = useAuthStore();

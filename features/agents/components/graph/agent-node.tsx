@@ -1,7 +1,7 @@
 "use client";
 
-import { memo, useCallback } from "react";
-import { Handle, Position, useReactFlow } from "@xyflow/react";
+import { memo, useCallback, useEffect } from "react";
+import { Handle, Position, useReactFlow, useUpdateNodeInternals } from "@xyflow/react";
 import {
   Brain,
   GitBranch,
@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import type { AgentNodeData, NodeType } from "../../utils/graph-transform";
 import { NODE_LABELS, NODE_COLOR_CLASSES } from "../../utils/graph-transform";
 
-const NODE_ICONS: Record<NodeType, React.ElementType> = {
+const NODE_ICONS: Partial<Record<NodeType, React.ElementType>> = {
   inbound_message: MessageCircle,
   llm_response: Brain,
   condition: GitBranch,
@@ -79,9 +79,9 @@ interface AgentNodeProps {
 
 export const AgentNode = memo(function AgentNode({ id, data, selected }: AgentNodeProps) {
   const { nodeType, config, isEntryPoint } = data;
-  const colors = NODE_COLOR_CLASSES[nodeType];
-  const Icon = NODE_ICONS[nodeType];
-  const label = NODE_LABELS[nodeType];
+  const colors = NODE_COLOR_CLASSES[nodeType] ?? NODE_COLOR_CLASSES.group;
+  const Icon = NODE_ICONS[nodeType] ?? MessageCircle;
+  const label = data.label || NODE_LABELS[nodeType];
   const preview = getConfigPreview(nodeType, config);
   const isTerminal = nodeType === "end_session";
   const isCondition = nodeType === "condition";
@@ -93,6 +93,15 @@ export const AgentNode = memo(function AgentNode({ id, data, selected }: AgentNo
     : isHumanReview
       ? [{ label: "approve" }, { label: "reject" }]
       : [];
+
+  const updateNodeInternals = useUpdateNodeInternals();
+
+  // Re-register handles with React Flow whenever routes change OR when this node
+  // is re-mounted (e.g. after being assigned to a group). Without this, dynamic
+  // handles on condition/human_review nodes cause error #008 during edge validation.
+  useEffect(() => {
+    updateNodeInternals(id);
+  }, [id, updateNodeInternals, routes.length, data.nodeType]);
 
   const { deleteElements, setNodes } = useReactFlow();
 

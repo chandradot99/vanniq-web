@@ -15,26 +15,58 @@ import type { ToolInfo } from "@/types";
 interface Props {
   config: Record<string, unknown>;
   onChange: (config: Record<string, unknown>) => void;
+  collectedVariables?: string[];
+  savedVariables?: string[];
 }
 
 function InputFields({
   tool,
   inputConfig,
   onInputChange,
+  collectedVariables = [],
+  savedVariables = [],
 }: {
   tool: ToolInfo;
   inputConfig: Record<string, string>;
   onInputChange: (key: string, value: string) => void;
+  collectedVariables?: string[];
+  savedVariables?: string[];
 }) {
   const props = (tool.input_schema as { properties?: Record<string, { description?: string }> })
     ?.properties ?? {};
   const required = (tool.input_schema as { required?: string[] })?.required ?? [];
+
+  function insertVariable(field: string, variable: string) {
+    onInputChange(field, variable);
+  }
+
+  const allVars = [
+    ...collectedVariables.map((v) => `{{collected.${v}}}`),
+    ...savedVariables.map((v) => `{{${v}}}`),
+  ];
 
   return (
     <div className="space-y-3">
       <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         Input Fields
       </Label>
+      {allVars.length > 0 && (
+        <div className="rounded-md bg-muted/50 px-3 py-2 space-y-1">
+          <p className="text-[10px] text-muted-foreground font-medium">Available variables — click to insert</p>
+          <div className="flex flex-wrap gap-1">
+            {allVars.map((v) => (
+              <button
+                key={v}
+                type="button"
+                className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-background border border-border/60 hover:border-primary/40 hover:text-primary transition-colors"
+                onClick={() => {/* handled per-field below */}}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {Object.entries(props).map(([key, meta]) => (
         <div key={key} className="space-y-1.5">
           <Label htmlFor={`input_${key}`} className="text-xs">
@@ -48,6 +80,20 @@ function InputFields({
             value={inputConfig[key] ?? ""}
             onChange={(e) => onInputChange(key, e.target.value)}
           />
+          {allVars.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {allVars.map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => insertVariable(key, v)}
+                  className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted hover:bg-accent border border-border/40 transition-colors"
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+          )}
           {meta.description && (
             <p className="text-xs text-muted-foreground">{meta.description}</p>
           )}
@@ -57,12 +103,13 @@ function InputFields({
   );
 }
 
-export function RunToolForm({ config, onChange }: Props) {
+export function RunToolForm({ config, onChange, collectedVariables = [], savedVariables = [] }: Props) {
   const { data: tools = [], isLoading } = useTools();
 
   const selectedToolName = (config.tool as string) ?? "";
   const selectedTool = tools.find((t) => t.name === selectedToolName) ?? null;
   const inputConfig = (config.input as Record<string, string>) ?? {};
+  const saveResponseTo = (config.save_response_to as string) ?? "";
 
   function handleToolChange(name: string) {
     onChange({ ...config, tool: name, input: {} });
@@ -107,21 +154,24 @@ export function RunToolForm({ config, onChange }: Props) {
           tool={selectedTool}
           inputConfig={inputConfig}
           onInputChange={handleInputChange}
+          collectedVariables={collectedVariables}
+          savedVariables={savedVariables}
         />
       )}
 
       {/* Save response to */}
       <div className="space-y-2">
-        <Label htmlFor="save_response_to">Save response to</Label>
+        <Label htmlFor="save_response_to">Save response to (optional)</Label>
         <Input
           id="save_response_to"
-          placeholder="e.g. booking_result"
+          placeholder="e.g. created_event"
           className="text-sm font-mono"
-          value={(config.save_response_to as string) ?? ""}
+          value={saveResponseTo}
           onChange={(e) => onChange({ ...config, save_response_to: e.target.value })}
         />
         <p className="text-xs text-muted-foreground">
-          Access the result later with {`{{save_response_to.field}}`}
+          Stores the tool&apos;s output so later nodes can reference{" "}
+          <span className="font-mono">{`{{${saveResponseTo || "variable_name"}.field}}`}</span>
         </p>
       </div>
     </div>

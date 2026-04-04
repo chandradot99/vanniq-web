@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -11,15 +11,17 @@ import {
   addEdge,
   ReactFlowProvider,
   useReactFlow,
+  useUpdateNodeInternals,
   MarkerType,
   type Connection,
   type NodeTypes,
+  type EdgeTypes,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { nanoid } from "nanoid";
 import { toast } from "sonner";
 import type { Agent } from "@/types";
-import { toFlowGraph, toGraphConfig, DEFAULT_NODE_CONFIGS } from "../../utils/graph-transform";
+import { toFlowGraph, toGraphConfig, DEFAULT_NODE_CONFIGS, NODE_LABELS } from "../../utils/graph-transform";
 import type { AgentFlowNode, AgentFlowEdge, NodeType } from "../../utils/graph-transform";
 import { useUpdateGraph } from "../../hooks/use-agents";
 import { GraphEditorHeader } from "./graph-editor-header";
@@ -27,8 +29,11 @@ import { NodePalette } from "./node-palette";
 import { NodeConfigPanel } from "./node-config-panel";
 import { ChatTestPanel } from "./chat-test-panel";
 import { AgentNode } from "./agent-node";
+import { GotoNode } from "./goto-node";
+import { GroupNode } from "./group-node";
 
-const nodeTypes: NodeTypes = { agentNode: AgentNode };
+const nodeTypes: NodeTypes = { agentNode: AgentNode, groupNode: GroupNode, gotoNode: GotoNode };
+const edgeTypes: EdgeTypes = {};
 
 interface GraphEditorInnerProps {
   agent: Agent;
@@ -36,7 +41,8 @@ interface GraphEditorInnerProps {
 
 function GraphEditorInner({ agent }: GraphEditorInnerProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, getIntersectingNodes, getViewport } = useReactFlow();
+  const updateNodeInternals = useUpdateNodeInternals();
 
   const initialGraph = agent.graph_config
     ? toFlowGraph(agent.graph_config)
@@ -52,6 +58,16 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   const updateGraphMutation = useUpdateGraph(agent.id);
+
+  // Warn before reload/close if there are unsaved changes
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (!isDirty) return;
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
 
   // Wrap base change handlers to mark dirty
 
@@ -73,8 +89,59 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
 
   const onConnect = useCallback(
     (connection: Connection) => {
-      // sourceHandle is the route label on condition/human_review nodes.
-      // Preserve it in edge data so toGraphConfig() can serialize it as `condition`.
+      const sourceNode = nodes.find((n) => n.id === connection.source);
+      const targetNode = nodes.find((n) => n.id === connection.target);
+
+      // Backward connection (target is to the left of source) → create a goto node
+      // instead of a crossing line. The goto node serializes back to a goto edge.
+      const isBackward =
+        sourceNode && targetNode && targetNode.type !== "gotoNode" &&
+        targetNode.position.x < sourceNode.position.x;
+
+      if (isBackward && sourceNode && targetNode) {
+        const gotoId = `goto_${nanoid(6)}`;
+        // Position the goto node to the right of the source (absolute coords)
+        const sourceParent = sourceNode.parentId
+          ? nodes.find((n) => n.id === sourceNode.parentId)
+          : null;
+        const absX = sourceNode.position.x + (sourceParent?.position.x ?? 0);
+        const absY = sourceNode.position.y + (sourceParent?.position.y ?? 0);
+
+        setNodes((nds) => [
+          ...nds,
+          {
+            id: gotoId,
+            type: "gotoNode",
+            position: { x: absX + ((sourceNode.measured?.width as number) ?? 224) + 50, y: absY },
+            data: {
+              nodeType: "goto",
+              label: "Go To",
+              config: { target: connection.target },
+              isEntryPoint: false,
+            },
+          },
+        ]);
+
+        setEdges((eds) =>
+          addEdge(
+            {
+              source: connection.source,
+              sourceHandle: connection.sourceHandle ?? null,
+              target: gotoId,
+              targetHandle: null,
+              id: nanoid(8),
+              type: "smoothstep",
+              markerEnd: { type: MarkerType.ArrowClosed },
+              label: connection.sourceHandle ?? undefined,
+              data: connection.sourceHandle ? { condition: connection.sourceHandle } : undefined,
+            },
+            eds,
+          ),
+        );
+        return;
+      }
+
+      // Normal forward edge
       setEdges((eds) =>
         addEdge(
           {
@@ -83,15 +150,13 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
             type: "smoothstep",
             markerEnd: { type: MarkerType.ArrowClosed },
             label: connection.sourceHandle ?? undefined,
-            data: connection.sourceHandle
-              ? { condition: connection.sourceHandle }
-              : undefined,
+            data: connection.sourceHandle ? { condition: connection.sourceHandle } : undefined,
           },
           eds,
         ),
       );
     },
-    [setEdges],
+    [setEdges, setNodes, nodes],
   );
 
   const onDrop = useCallback(
@@ -103,6 +168,39 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
       const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
       const id = `${nodeType}_${nanoid(6)}`;
 
+      if (nodeType === "group") {
+        // Groups are placed behind other nodes with a default size
+        setNodes((nds) => [
+          {
+            id,
+            type: "groupNode",
+            position,
+            style: { width: 420, height: 260 },
+            data: { nodeType: "group", label: "Group", colorIndex: 0, config: {}, isEntryPoint: false },
+          },
+          ...nds, // group goes first so it renders beneath existing nodes
+        ]);
+        return;
+      }
+
+      if (nodeType === "goto") {
+        setNodes((nds) => [
+          ...nds,
+          {
+            id,
+            type: "gotoNode",
+            position,
+            data: {
+              nodeType: "goto",
+              label: "Go To",
+              config: { target: "" },
+              isEntryPoint: false,
+            },
+          },
+        ]);
+        return;
+      }
+
       setNodes((nds) => [
         ...nds,
         {
@@ -111,13 +209,63 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
           position,
           data: {
             nodeType,
+            label: NODE_LABELS[nodeType],
             config: { ...DEFAULT_NODE_CONFIGS[nodeType] },
-            isEntryPoint: nds.length === 0, // first node becomes entry point
+            isEntryPoint: nds.filter((n) => n.type !== "groupNode" && n.type !== "gotoNode").length === 0,
           },
         },
       ]);
     },
     [screenToFlowPosition, setNodes],
+  );
+
+  // When a node is dropped, check if it landed inside a group and set parentId.
+  // node.position is RELATIVE to its current parent (if any), ABSOLUTE if unparented.
+  const onNodeDragStop = useCallback(
+    (_: React.MouseEvent, node: AgentFlowNode) => {
+      if (node.type === "groupNode" || node.type === "gotoNode") return;
+
+      const intersecting = getIntersectingNodes(node).filter((n) => n.type === "groupNode");
+      const targetGroup = intersecting[0] ?? null;
+
+      // No group change — nothing to do (onNodesChange already updated position)
+      if (targetGroup?.id === node.parentId) return;
+      if (!targetGroup && !node.parentId) return;
+
+      setNodes((nds) => {
+        const currentParent = node.parentId
+          ? nds.find((n) => n.id === node.parentId)
+          : null;
+
+        // Convert node.position to absolute canvas coordinates
+        const absX = node.position.x + (currentParent?.position.x ?? 0);
+        const absY = node.position.y + (currentParent?.position.y ?? 0);
+
+        return nds.map((n) => {
+          if (n.id !== node.id) return n;
+
+          if (targetGroup) {
+            // Entering a group — position becomes relative to the group
+            return {
+              ...n,
+              parentId: targetGroup.id,
+              extent: "parent" as const,
+              position: {
+                x: Math.max(0, absX - targetGroup.position.x),
+                y: Math.max(0, absY - targetGroup.position.y),
+              },
+            };
+          }
+
+          // Leaving a group — restore absolute position
+          return { ...n, parentId: undefined, extent: undefined, position: { x: absX, y: absY } };
+        });
+      });
+
+      // Re-register handles on the moved node so edge validation finds them immediately
+      updateNodeInternals(node.id);
+    },
+    [getIntersectingNodes, setNodes, updateNodeInternals],
   );
 
   const onDragOver = useCallback((e: React.DragEvent) => {
@@ -149,10 +297,55 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
     );
   }
 
+  function updateNodeLabel(nodeId: string, label: string) {
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === nodeId ? { ...n, data: { ...n.data, label } } : n,
+      ),
+    );
+    setIsDirty(true);
+  }
+
+  function updateNodeGroup(nodeId: string, groupId: string | null) {
+    setNodes((nds) => {
+      const group = groupId ? nds.find((n) => n.id === groupId) : null;
+      return nds.map((n) => {
+        if (n.id !== nodeId) return n;
+        if (group) {
+          return {
+            ...n,
+            parentId: group.id,
+            extent: "parent" as const,
+            position: {
+              x: n.position.x - group.position.x,
+              y: n.position.y - group.position.y,
+            },
+          };
+        }
+        // Remove from group — convert relative position back to absolute
+        const parentGroup = nds.find((g) => g.id === n.parentId);
+        return {
+          ...n,
+          parentId: undefined,
+          extent: undefined,
+          position: parentGroup
+            ? { x: n.position.x + parentGroup.position.x, y: n.position.y + parentGroup.position.y }
+            : n.position,
+        };
+      });
+    });
+    setIsDirty(true);
+  }
+
   function validateGraph(): string | null {
-    if (nodes.length === 0) return "Add at least one node before saving";
-    const hasEntry = nodes.some((n) => n.data.isEntryPoint);
+    const realNodes = nodes.filter((n) => n.type !== "groupNode" && n.type !== "gotoNode");
+    if (realNodes.length === 0) return "Add at least one node before saving";
+    const hasEntry = realNodes.some((n) => n.data.isEntryPoint);
     if (!hasEntry) return "Set an entry point node (click ↑ on a node)";
+    const ungotod = nodes.filter(
+      (n) => n.type === "gotoNode" && !(n.data.config?.target as string),
+    );
+    if (ungotod.length > 0) return "All Go To nodes must have a target selected";
     return null;
   }
 
@@ -162,7 +355,7 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
       toast.error(validationError);
       return;
     }
-    const graphConfig = toGraphConfig(nodes, edges);
+    const graphConfig = toGraphConfig(nodes, edges, getViewport());
     updateGraphMutation.mutate(graphConfig, {
       onSuccess: () => setIsDirty(false),
     });
@@ -198,11 +391,14 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
               onNodesDelete={onNodesDelete}
+              onNodeDragStop={onNodeDragStop}
               nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
               onNodeClick={(_, node) => setSelectedNodeId(node.id)}
               onPaneClick={() => setSelectedNodeId(null)}
-              fitView
-              fitViewOptions={{ padding: 0.2 }}
+              {...(initialGraph.viewport
+                ? { defaultViewport: initialGraph.viewport }
+                : { fitView: true, fitViewOptions: { padding: 0.2 } })}
               deleteKeyCode={["Backspace", "Delete"]}
               className="bg-background"
             >
@@ -222,7 +418,9 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
             <div className="absolute right-0 top-0 h-full z-10">
               <NodeConfigPanel
                 node={selectedNode as AgentFlowNode}
+                allNodes={nodes}
                 onUpdate={updateNodeConfig}
+                onUpdateLabel={updateNodeLabel}
                 onClose={() => setSelectedNodeId(null)}
               />
             </div>

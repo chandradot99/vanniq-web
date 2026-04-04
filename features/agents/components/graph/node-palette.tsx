@@ -16,6 +16,8 @@ import {
   PanelLeftOpen,
   MessageCircle,
   UserCheck,
+  Layers,
+  CornerUpLeft,
 } from "lucide-react";
 import type { NodeType } from "../../utils/graph-transform";
 import { NODE_LABELS, NODE_COLOR_CLASSES } from "../../utils/graph-transform";
@@ -50,9 +52,19 @@ const PALETTE_CATEGORIES: PaletteCategory[] = [
     label: "Session",
     nodes: ["end_session", "post_session_action"],
   },
+  {
+    label: "Flow Control",
+    nodes: ["goto"],
+  },
+  {
+    label: "Layout",
+    nodes: ["group"],
+  },
 ];
 
-const PALETTE_ICONS: Record<NodeType, React.ElementType> = {
+const PALETTE_ICONS: Partial<Record<NodeType, React.ElementType>> = {
+  group: Layers,
+  goto: CornerUpLeft,
   inbound_message: MessageCircle,
   llm_response: Brain,
   condition: GitBranch,
@@ -101,8 +113,8 @@ export function NodePalette() {
         {collapsed ? (
           // Collapsed: flat icon list, no categories
           PALETTE_CATEGORIES.flatMap((cat) => cat.nodes).map((nodeType) => {
-            const colors = NODE_COLOR_CLASSES[nodeType];
-            const Icon = PALETTE_ICONS[nodeType];
+            const colors = NODE_COLOR_CLASSES[nodeType] ?? NODE_COLOR_CLASSES.group;
+            const Icon = PALETTE_ICONS[nodeType] ?? Layers;
             return (
               <div
                 key={nodeType}
@@ -125,8 +137,8 @@ export function NodePalette() {
                 {category.label}
               </p>
               {category.nodes.map((nodeType) => {
-                const colors = NODE_COLOR_CLASSES[nodeType];
-                const Icon = PALETTE_ICONS[nodeType];
+                const colors = NODE_COLOR_CLASSES[nodeType] ?? NODE_COLOR_CLASSES.group;
+                const Icon = PALETTE_ICONS[nodeType] ?? Layers;
                 return (
                   <div
                     key={nodeType}
