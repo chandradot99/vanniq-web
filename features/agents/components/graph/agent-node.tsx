@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useEffect } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { Handle, Position, useReactFlow, useUpdateNodeInternals } from "@xyflow/react";
 import {
   Brain,
@@ -18,6 +18,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { AgentNodeData, NodeType } from "../../utils/graph-transform";
 import { NODE_LABELS, NODE_COLOR_CLASSES } from "../../utils/graph-transform";
 
@@ -104,16 +105,14 @@ export const AgentNode = memo(function AgentNode({ id, data, selected }: AgentNo
   }, [id, updateNodeInternals, routes.length, data.nodeType]);
 
   const { deleteElements, setNodes } = useReactFlow();
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
-  const handleDelete = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (!isEntryPoint) {
-        deleteElements({ nodes: [{ id }] });
-      }
-    },
-    [id, isEntryPoint, deleteElements],
-  );
+  const handleDeleteClick = useCallback((e: React.MouseEvent) => { e.stopPropagation(); setConfirmingDelete(true); }, []);
+  const handleConfirmDelete = useCallback(() => {
+    setConfirmingDelete(false);
+    deleteElements({ nodes: [{ id }] });
+  }, [id, deleteElements]);
+  const handleCancelDelete = useCallback(() => setConfirmingDelete(false), []);
 
   const handleSetEntryPoint = useCallback(
     (e: React.MouseEvent) => {
@@ -166,7 +165,8 @@ export const AgentNode = memo(function AgentNode({ id, data, selected }: AgentNo
           )}
           {!isEntryPoint && (
             <button
-              onMouseDown={handleDelete}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={handleDeleteClick}
               className="h-5 w-5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex items-center justify-center transition-colors"
               title="Delete node"
             >
@@ -174,6 +174,15 @@ export const AgentNode = memo(function AgentNode({ id, data, selected }: AgentNo
             </button>
           )}
         </div>
+
+        <ConfirmDialog
+          open={confirmingDelete}
+          title="Delete node?"
+          description="This will remove the node and all its connections. This cannot be undone."
+          confirmLabel="Delete"
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+        />
       </div>
 
       {/* Divider + preview */}

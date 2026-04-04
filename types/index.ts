@@ -93,6 +93,37 @@ export interface TestIntegrationResponse {
   error: string | null;
 }
 
+// ── Admin / Platform Configs ──────────────────────────────────────────────────
+
+export interface FieldSchema {
+  key: string;
+  label: string;
+  secret: boolean;
+  required: boolean;
+  placeholder: string;
+  default: string;
+}
+
+export interface ProviderSchema {
+  provider: string;
+  display_name: string;
+  category: string;
+  description: string;
+  fields: FieldSchema[];
+}
+
+export interface PlatformConfig {
+  id: string;
+  provider: string;
+  display_name: string;
+  category: string;
+  config: Record<string, string>;
+  enabled: boolean;
+  meta: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
 // ── Tools ─────────────────────────────────────────────────────────────────────
 
 export interface ToolInfo {

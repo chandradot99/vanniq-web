@@ -1,8 +1,9 @@
 "use client";
 
-import { memo, useCallback } from "react";
+import { memo, useCallback, useState } from "react";
 import { Handle, Position, useReactFlow, useStore } from "@xyflow/react";
 import { CornerUpLeft, ArrowRight, Trash2 } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { AgentNodeData } from "../../utils/graph-transform";
 
 interface GotoNodeProps {
@@ -22,6 +23,7 @@ interface GotoNodeProps {
 export const GotoNode = memo(function GotoNode({ id, data, selected }: GotoNodeProps) {
   const { getNode, setCenter, deleteElements } = useReactFlow();
   const targetId = data.config?.target as string | undefined;
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   // Reactively read the destination label (group › node) from the store
   const targetLabel = useStore((s) => {
@@ -52,13 +54,12 @@ export const GotoNode = memo(function GotoNode({ id, data, selected }: GotoNodeP
     [targetId, getNode, setCenter],
   );
 
-  const handleDelete = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      deleteElements({ nodes: [{ id }] });
-    },
-    [id, deleteElements],
-  );
+  const handleDeleteClick = useCallback((e: React.MouseEvent) => { e.stopPropagation(); setConfirmingDelete(true); }, []);
+  const handleConfirmDelete = useCallback(() => {
+    setConfirmingDelete(false);
+    deleteElements({ nodes: [{ id }] });
+  }, [id, deleteElements]);
+  const handleCancelDelete = useCallback(() => setConfirmingDelete(false), []);
 
   return (
     <div
@@ -108,13 +109,23 @@ export const GotoNode = memo(function GotoNode({ id, data, selected }: GotoNodeP
           </button>
         )}
         <button
-          onMouseDown={handleDelete}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={handleDeleteClick}
           title="Delete"
           className="h-5 w-5 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
         >
           <Trash2 className="h-3 w-3" />
         </button>
       </div>
+
+      <ConfirmDialog
+        open={confirmingDelete}
+        title="Delete Go To node?"
+        description="This will remove the Go To node and its connection."
+        confirmLabel="Delete"
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+      />
     </div>
   );
 });

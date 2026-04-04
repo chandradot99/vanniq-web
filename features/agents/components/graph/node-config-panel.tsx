@@ -1,6 +1,8 @@
 "use client";
 
-import { X } from "lucide-react";
+import { useState } from "react";
+import { X, Trash2 } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { AgentFlowNode, NodeType } from "../../utils/graph-transform";
@@ -27,6 +29,7 @@ interface Props {
   onUpdate: (nodeId: string, config: Record<string, unknown>) => void;
   onUpdateLabel: (nodeId: string, label: string) => void;
   onClose: () => void;
+  onDelete: (nodeId: string) => void;
   onUpdateGotoTarget?: (nodeId: string, target: string) => void;
 }
 
@@ -58,10 +61,12 @@ function getSavedResponseVariables(allNodes: AgentFlowNode[]): string[] {
   return vars;
 }
 
-export function NodeConfigPanel({ node, allNodes, onUpdate, onUpdateLabel, onClose }: Props) {
+export function NodeConfigPanel({ node, allNodes, onUpdate, onUpdateLabel, onClose, onDelete }: Props) {
   const nodeType = node.data.nodeType as NodeType;
   const isGroup = node.type === "groupNode";
   const isGoto = node.type === "gotoNode";
+  const isEntryPoint = node.data.isEntryPoint;
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const colors = NODE_COLOR_CLASSES[nodeType] ?? NODE_COLOR_CLASSES.group;
   const collectedVars = getCollectedVariables(allNodes);
   const savedVars = getSavedResponseVariables(allNodes);
@@ -110,7 +115,7 @@ export function NodeConfigPanel({ node, allNodes, onUpdate, onUpdateLabel, onClo
       </div>
 
       {/* Scrollable form area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-0">
         {/* Group color picker */}
         {isGroup && (
           <div className="space-y-2">
@@ -152,6 +157,27 @@ export function NodeConfigPanel({ node, allNodes, onUpdate, onUpdateLabel, onClo
         {!isGroup && !isGoto && nodeType === "rag_search" && <RagSearchForm {...formProps} />}
         {!isGroup && !isGoto && nodeType === "post_session_action" && <PostSessionActionForm {...formProps} />}
       </div>
+
+      {/* Delete section */}
+      {!isEntryPoint && (
+        <div className="border-t border-border/60 p-4 shrink-0">
+          <button
+            onClick={() => setConfirmingDelete(true)}
+            className="w-full h-7 rounded-md border border-destructive/40 text-destructive text-xs font-medium flex items-center justify-center gap-1.5 hover:bg-destructive/10 transition-colors"
+          >
+            <Trash2 className="h-3 w-3" />
+            Delete Node
+          </button>
+          <ConfirmDialog
+            open={confirmingDelete}
+            title="Delete node?"
+            description="This will remove the node and all its connections. This cannot be undone."
+            confirmLabel="Delete"
+            onConfirm={() => { setConfirmingDelete(false); onDelete(node.id); }}
+            onCancel={() => setConfirmingDelete(false)}
+          />
+        </div>
+      )}
     </div>
   );
 }

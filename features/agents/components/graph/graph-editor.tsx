@@ -13,6 +13,7 @@ import {
   useReactFlow,
   useUpdateNodeInternals,
   MarkerType,
+  ConnectionLineType,
   type Connection,
   type NodeTypes,
   type EdgeTypes,
@@ -41,7 +42,7 @@ interface GraphEditorInnerProps {
 
 function GraphEditorInner({ agent }: GraphEditorInnerProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const { screenToFlowPosition, getIntersectingNodes, getViewport } = useReactFlow();
+  const { screenToFlowPosition, getIntersectingNodes, getViewport, deleteElements } = useReactFlow();
   const updateNodeInternals = useUpdateNodeInternals();
 
   const initialGraph = agent.graph_config
@@ -130,7 +131,7 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
               target: gotoId,
               targetHandle: null,
               id: nanoid(8),
-              type: "smoothstep",
+              type: "default",
               markerEnd: { type: MarkerType.ArrowClosed },
               label: connection.sourceHandle ?? undefined,
               data: connection.sourceHandle ? { condition: connection.sourceHandle } : undefined,
@@ -147,7 +148,7 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
           {
             ...connection,
             id: nanoid(8),
-            type: "smoothstep",
+            type: "default",
             markerEnd: { type: MarkerType.ArrowClosed },
             label: connection.sourceHandle ?? undefined,
             data: connection.sourceHandle ? { condition: connection.sourceHandle } : undefined,
@@ -278,15 +279,26 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
       const hasEntryPoint = deleted.some((n) => n.data.isEntryPoint);
       if (hasEntryPoint) {
         toast.error("Cannot delete the entry point node");
-        // Restore deleted entry nodes
         setNodes((nds) => {
           const deletedIds = new Set(deleted.map((n) => n.id));
           const restored = deleted.filter((n) => n.data.isEntryPoint);
           return [...nds.filter((n) => !deletedIds.has(n.id)), ...restored];
         });
       }
+      // Close config panel if the selected node was deleted
+      setSelectedNodeId((prev) => {
+        const deletedIds = new Set(deleted.map((n) => n.id));
+        return prev && deletedIds.has(prev) ? null : prev;
+      });
     },
     [setNodes],
+  );
+
+  const deleteNode = useCallback(
+    (nodeId: string) => {
+      deleteElements({ nodes: [{ id: nodeId }] });
+    },
+    [deleteElements],
   );
 
   function updateNodeConfig(nodeId: string, config: Record<string, unknown>) {
@@ -394,6 +406,7 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
               onNodeDragStop={onNodeDragStop}
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
+              connectionLineType={ConnectionLineType.Bezier}
               onNodeClick={(_, node) => setSelectedNodeId(node.id)}
               onPaneClick={() => setSelectedNodeId(null)}
               {...(initialGraph.viewport
@@ -422,6 +435,7 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
                 onUpdate={updateNodeConfig}
                 onUpdateLabel={updateNodeLabel}
                 onClose={() => setSelectedNodeId(null)}
+                onDelete={deleteNode}
               />
             </div>
           )}
