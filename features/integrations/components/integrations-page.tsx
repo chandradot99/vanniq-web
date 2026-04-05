@@ -203,7 +203,7 @@ export function IntegrationsPage() {
 
   return (
     <>
-      <div className="p-8 max-w-3xl mx-auto space-y-10 overflow-auto">
+      <div className="h-full overflow-y-auto p-8 max-w-3xl mx-auto space-y-10">
         {/* Header */}
         <div className="flex items-start gap-3">
           <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
