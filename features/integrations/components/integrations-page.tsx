@@ -27,6 +27,27 @@ function AnthropicLogo() {
     </div>
   );
 }
+function GroqLogo() {
+  return (
+    <div className="w-10 h-10 rounded-lg bg-[#f55036] flex items-center justify-center text-white font-bold text-sm shrink-0">
+      G
+    </div>
+  );
+}
+function GeminiLogo() {
+  return (
+    <div className="w-10 h-10 rounded-lg bg-[#4285F4] flex items-center justify-center text-white font-bold text-sm shrink-0">
+      G
+    </div>
+  );
+}
+function MistralLogo() {
+  return (
+    <div className="w-10 h-10 rounded-lg bg-[#ff7000] flex items-center justify-center text-white font-bold text-sm shrink-0">
+      M
+    </div>
+  );
+}
 function GoogleLogo() {
   return (
     <div className="w-10 h-10 rounded-lg bg-white border border-border flex items-center justify-center shrink-0">
@@ -125,6 +146,30 @@ export function IntegrationsPage() {
       authType: "apikey",
       testable: true,
       onConnect: () => setApiKeyProvider("anthropic"),
+    },
+    {
+      provider: "groq",
+      name: "Groq",
+      description: "Run Llama 3, Gemma 2, and Mixtral at ultra-low latency. Great for fast routing and condition nodes.",
+      logo: <GroqLogo />,
+      authType: "apikey",
+      onConnect: () => setApiKeyProvider("groq"),
+    },
+    {
+      provider: "gemini",
+      name: "Google Gemini",
+      description: "Use Gemini 1.5 Pro and Flash for multimodal reasoning and long-context agent flows.",
+      logo: <GeminiLogo />,
+      authType: "apikey",
+      onConnect: () => setApiKeyProvider("gemini"),
+    },
+    {
+      provider: "mistral",
+      name: "Mistral",
+      description: "European open-weight models. Mistral Large and Small offer strong multilingual performance.",
+      logo: <MistralLogo />,
+      authType: "apikey",
+      onConnect: () => setApiKeyProvider("mistral"),
     },
   ];
 
