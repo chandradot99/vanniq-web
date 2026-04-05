@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { AgentNodeData, NodeType, TurnVisit } from "../../utils/graph-transform";
 import { NODE_LABELS, NODE_COLOR_CLASSES, getNodeConfigError } from "../../utils/graph-transform";
+import { modelShortLabel } from "./config-forms/model-picker";
 import { useToolSchemas } from "./tool-schemas-context";
 
 function formatMs(ms: number | null): string | null {
@@ -286,8 +287,13 @@ export const AgentNode = memo(function AgentNode({ id, data, selected }: AgentNo
       </div>
 
       {/* Divider + preview */}
-      <div className="px-3 pb-3 border-t border-border/40 pt-2">
+      <div className="px-3 pb-3 border-t border-border/40 pt-2 space-y-1">
         <p className="text-[10px] text-muted-foreground leading-relaxed line-clamp-2">{preview}</p>
+        {config.model && (
+          <p className="text-[9px] font-mono text-muted-foreground/50 truncate">
+            {modelShortLabel(config.provider as string | undefined, config.model as string)}
+          </p>
+        )}
       </div>
 
       {/* Footer badges */}

@@ -2,6 +2,7 @@
 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ModelPicker } from "./model-picker";
 
 interface Props {
   config: Record<string, unknown>;
@@ -22,6 +23,8 @@ export function LlmResponseForm({ config, onChange }: Props) {
           onChange={(e) => onChange({ ...config, instructions: e.target.value })}
         />
       </div>
+
+      <ModelPicker config={config} onChange={onChange} />
     </div>
   );
 }

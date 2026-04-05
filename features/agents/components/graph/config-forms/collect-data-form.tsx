@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { ModelPicker } from "./model-picker";
 import {
   Select,
   SelectContent,
@@ -107,6 +108,8 @@ export function CollectDataForm({ config, onChange }: Props) {
           </div>
         </div>
       ))}
+
+      <ModelPicker config={config} onChange={onChange} />
     </div>
   );
 }

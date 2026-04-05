@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
+import { ModelPicker } from "./model-picker";
 
 interface Route {
   label: string;
@@ -82,6 +83,8 @@ export function ConditionForm({ config, onChange }: Props) {
           </div>
         ))}
       </div>
+
+      <ModelPicker config={config} onChange={onChange} />
     </div>
   );
 }
