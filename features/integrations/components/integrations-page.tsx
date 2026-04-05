@@ -153,6 +153,7 @@ export function IntegrationsPage() {
       description: "Run Llama 3, Gemma 2, and Mixtral at ultra-low latency. Great for fast routing and condition nodes.",
       logo: <GroqLogo />,
       authType: "apikey",
+      testable: true,
       onConnect: () => setApiKeyProvider("groq"),
     },
     {
@@ -161,6 +162,7 @@ export function IntegrationsPage() {
       description: "Use Gemini 1.5 Pro and Flash for multimodal reasoning and long-context agent flows.",
       logo: <GeminiLogo />,
       authType: "apikey",
+      testable: true,
       onConnect: () => setApiKeyProvider("gemini"),
     },
     {
@@ -169,6 +171,7 @@ export function IntegrationsPage() {
       description: "European open-weight models. Mistral Large and Small offer strong multilingual performance.",
       logo: <MistralLogo />,
       authType: "apikey",
+      testable: true,
       onConnect: () => setApiKeyProvider("mistral"),
     },
   ];
