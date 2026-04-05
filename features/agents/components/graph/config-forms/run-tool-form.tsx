@@ -193,7 +193,7 @@ function InputFields({
   savedVariables?: string[];
 }) {
   const schema = tool.input_schema as {
-    properties?: Record<string, { description?: string; default?: unknown }>;
+    properties?: Record<string, { type?: string; format?: string; description?: string; default?: unknown }>;
     required?: string[];
   };
   const props = schema?.properties ?? {};
@@ -234,10 +234,17 @@ function InputFields({
           <div key={key} className="space-y-1.5">
             {/* Label row with mode toggle */}
             <div className="flex items-center justify-between gap-2">
-              <Label htmlFor={`input_${key}`} className="text-xs">
-                {key}
-                {required.includes(key) && <span className="text-destructive ml-0.5">*</span>}
-              </Label>
+              <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                <Label htmlFor={`input_${key}`} className="text-xs">
+                  {key}
+                  {required.includes(key) && <span className="text-destructive ml-0.5">*</span>}
+                </Label>
+                {(meta.format ?? meta.type) && (
+                  <span className="text-[9px] font-mono px-1 py-0.5 rounded bg-muted text-muted-foreground border border-border/40 shrink-0">
+                    {meta.format ?? meta.type}
+                  </span>
+                )}
+              </div>
               {hasVars && (
                 <div className="flex rounded border border-border/60 overflow-hidden text-[10px] shrink-0">
                   <button

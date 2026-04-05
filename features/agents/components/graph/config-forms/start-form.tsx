@@ -1,7 +1,6 @@
 "use client";
 
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 interface Props {
@@ -33,10 +32,11 @@ export function StartForm({ config, onChange }: Props) {
           Greeting{" "}
           <span className="text-muted-foreground font-normal">(optional)</span>
         </Label>
-        <Input
+        <Textarea
           id="greeting"
           placeholder="Hello! How can I help you today?"
-          className="text-sm"
+          rows={4}
+          className="resize-none text-sm"
           value={(config.greeting as string) ?? ""}
           onChange={(e) => onChange({ ...config, greeting: e.target.value })}
         />

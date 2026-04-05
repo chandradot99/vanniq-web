@@ -4,6 +4,7 @@ import { useState } from "react";
 import { formatDistanceToNow, format } from "date-fns";
 import {
   CheckCircle,
+  XCircle,
   Clock,
   ChevronRight,
   ChevronDown,
@@ -39,6 +40,7 @@ function SessionRow({
   onClick: () => void;
 }) {
   const ended = session.status === "ended";
+  const failed = ended && session.had_error;
   return (
     <button
       onClick={onClick}
@@ -48,7 +50,9 @@ function SessionRow({
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          {ended ? (
+          {failed ? (
+            <XCircle className="h-3.5 w-3.5 text-red-500 shrink-0" />
+          ) : ended ? (
             <CheckCircle className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
           ) : (
             <Clock className="h-3.5 w-3.5 text-amber-500 shrink-0 animate-pulse" />
@@ -228,8 +232,14 @@ function SessionDetailPanel({ sessionId, graphConfig }: { sessionId: string; gra
             Sentiment: {session.sentiment}
           </span>
         )}
-        <span className={`text-xs ml-auto ${session.status === "ended" ? "text-emerald-500" : "text-amber-500"}`}>
-          {session.status}
+        <span className={`text-xs ml-auto ${
+          session.status === "ended" && session.meta?.failed
+            ? "text-red-500"
+            : session.status === "ended"
+            ? "text-emerald-500"
+            : "text-amber-500"
+        }`}>
+          {session.status === "ended" && session.meta?.failed ? "failed" : session.status}
         </span>
         {langsmithUrl && (
           <a

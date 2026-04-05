@@ -42,6 +42,8 @@ export const chatApi = {
     api.post(`/v1/chat/${agentId}/start`),
   sendMessage: (sessionId: string, message: string): Promise<SendMessageResponse> =>
     api.post("/v1/chat/message", { session_id: sessionId, message }),
+  abandon: (sessionId: string): Promise<void> =>
+    api.post(`/v1/chat/sessions/${sessionId}/abandon`),
 };
 
 export const sessionsApi = {

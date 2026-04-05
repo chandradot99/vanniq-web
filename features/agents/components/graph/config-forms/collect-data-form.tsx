@@ -2,6 +2,7 @@
 
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { ModelPicker } from "./model-picker";
@@ -47,6 +48,24 @@ export function CollectDataForm({ config, onChange }: Props) {
 
   return (
     <div className="space-y-3">
+      <div className="space-y-2">
+        <Label htmlFor="instructions">
+          Instructions{" "}
+          <span className="text-muted-foreground font-normal">(optional)</span>
+        </Label>
+        <Textarea
+          id="instructions"
+          placeholder="e.g. User wants to book a meeting. Collect date, time, and title."
+          rows={3}
+          className="resize-none text-xs"
+          value={(config.instructions as string) ?? ""}
+          onChange={(e) => onChange({ ...config, instructions: e.target.value })}
+        />
+        <p className="text-xs text-muted-foreground">
+          Helps the node extract fields the user already mentioned upfront — skipping unnecessary questions.
+        </p>
+      </div>
+
       <div className="flex items-center justify-between">
         <Label>Fields to collect</Label>
         <Button type="button" variant="ghost" size="sm" onClick={addField} className="h-7 text-xs">

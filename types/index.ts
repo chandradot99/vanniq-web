@@ -100,6 +100,7 @@ export interface SessionSummary {
   id: string;
   agent_id: string;
   status: "active" | "ended";
+  had_error: boolean;
   channel: string;
   message_count: number;
   tool_call_count: number;

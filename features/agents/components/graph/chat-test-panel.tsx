@@ -148,7 +148,7 @@ export function ChatTestPanel({ agentId, isOpen, onClose }: Props) {
       // Remove empty streaming placeholder — no tokens were streamed for this turn
       setMessages((prev) => [
         ...prev.filter((msg, i) => !(i === streamingIndex && msg.content === "")),
-        { role: "agent" as const, content: isError ? `⚠️ Node error: ${content}` : content },
+        { role: "agent" as const, content: isError ? "Something went wrong. Please try again." : content },
       ]);
     } else if (type === "collect_question") {
       // collect_data node is asking the user for a field value — show it as an agent message
@@ -210,7 +210,12 @@ export function ChatTestPanel({ agentId, isOpen, onClose }: Props) {
             <RotateCcw className="h-3 w-3" />
           </button>
           <button
-            onClick={onClose}
+            onClick={() => {
+              if (sessionId && !sessionEnded) {
+                chatApi.abandon(sessionId).catch(() => {});
+              }
+              onClose();
+            }}
             className="h-6 w-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
           >
             <X className="h-3.5 w-3.5" />

@@ -200,6 +200,27 @@ function NodeDebugPanel({
                     </div>
                   )}
 
+                  {/* run_tool I/O — shown before the error so input is always visible */}
+                  {nodeEvt.data.node_type === "run_tool" && (
+                    <div className="space-y-1.5">
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                        Tool · {(nodeEvt.data.tool_name as string) || "run_tool"}
+                      </p>
+                      {nodeEvt.data.tool_input !== undefined && (
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-medium">Request</p>
+                          <JsonBlock value={nodeEvt.data.tool_input} />
+                        </div>
+                      )}
+                      {nodeEvt.data.tool_output !== undefined && nodeEvt.data.tool_output !== null && (
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-medium">Response</p>
+                          <JsonBlock value={nodeEvt.data.tool_output} />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Node error */}
                   {nodeEvt.error && (
                     <div className="rounded border border-red-500/30 bg-red-500/5 p-2">
@@ -400,6 +421,7 @@ function ExecutionGraphInner({ graphConfig, timeline, sessionStatus, transcript 
 
   const isExecutionMode = timeline.events.some((e) => e.event_type === "node");
   const hasError = !!errorEvent;
+  const isFailed = sessionStatus === "ended" && hasError;
   const isComplete = sessionStatus === "ended" && !hasError;
   const isActive = sessionStatus === "active" && !hasError;
 
@@ -559,10 +581,21 @@ function ExecutionGraphInner({ graphConfig, timeline, sessionStatus, transcript 
             Completed
           </div>
         )}
-        {hasError && (
+        {isFailed && (
+          <div className="flex items-center gap-1.5 text-xs font-medium text-red-500 shrink-0">
+            <AlertCircle className="h-3.5 w-3.5" />
+            Failed
+          </div>
+        )}
+        {hasError && !isFailed && (
           <div className="flex items-center gap-1.5 text-xs font-medium text-red-500 shrink-0">
             <AlertCircle className="h-3.5 w-3.5" />
             Error at &quot;{errorEvent?.name || "unknown"}&quot;
+          </div>
+        )}
+        {isFailed && (
+          <div className="text-xs text-red-400 shrink-0">
+            at &quot;{errorEvent?.name || "unknown"}&quot;
           </div>
         )}
         {isActive && (
