@@ -401,7 +401,7 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
         activeTab={activeTab}
         onSave={handleSave}
         onToggleChat={() => setIsChatOpen((o) => !o)}
-        onTabChange={(tab) => { setActiveTab(tab); if (tab === "sessions") setIsChatOpen(false); }}
+        onTabChange={(tab) => { setActiveTab(tab); if (tab !== "builder") setIsChatOpen(false); }}
       />
 
       {activeTab === "sessions" ? (

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { AudioLines, Bot, Plug, Settings, LogOut, PanelLeftClose, PanelLeftOpen, Moon, Sun } from "lucide-react";
+import { AudioLines, Bot, Plug, Settings, LogOut, PanelLeftClose, PanelLeftOpen, Moon, Sun, PhoneIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/store/auth";
 import { api } from "@/lib/api";
@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/agents", label: "Agents", icon: Bot },
+  { href: "/voice", label: "Voice", icon: PhoneIcon },
   { href: "/integrations", label: "Integrations", icon: Plug },
   { href: "/settings/platform", label: "Platform Settings", icon: Settings },
 ];

@@ -48,6 +48,27 @@ function MistralLogo() {
     </div>
   );
 }
+function DeepgramLogo() {
+  return (
+    <div className="w-10 h-10 rounded-lg bg-[#101010] flex items-center justify-center text-white font-bold text-sm shrink-0">
+      Dg
+    </div>
+  );
+}
+function CartesiaLogo() {
+  return (
+    <div className="w-10 h-10 rounded-lg bg-[#7c3aed] flex items-center justify-center text-white font-bold text-sm shrink-0">
+      Ca
+    </div>
+  );
+}
+function ElevenLabsLogo() {
+  return (
+    <div className="w-10 h-10 rounded-lg bg-[#1a1a1a] flex items-center justify-center text-white font-bold text-sm shrink-0">
+      11
+    </div>
+  );
+}
 function GoogleLogo() {
   return (
     <div className="w-10 h-10 rounded-lg bg-white border border-border flex items-center justify-center shrink-0">
@@ -176,6 +197,36 @@ export function IntegrationsPage() {
     },
   ];
 
+  const voiceDefs: ProviderDef[] = [
+    {
+      provider: "deepgram",
+      name: "Deepgram",
+      description: "Speech-to-text for your agent's voice calls. Overrides the platform default Deepgram key for your org.",
+      logo: <DeepgramLogo />,
+      authType: "apikey",
+      testable: false,
+      onConnect: () => setApiKeyProvider("deepgram"),
+    },
+    {
+      provider: "cartesia",
+      name: "Cartesia",
+      description: "Low-latency text-to-speech. Bring your own Cartesia key for voice calls.",
+      logo: <CartesiaLogo />,
+      authType: "apikey",
+      testable: false,
+      onConnect: () => setApiKeyProvider("cartesia"),
+    },
+    {
+      provider: "elevenlabs",
+      name: "ElevenLabs",
+      description: "Realistic TTS with voice cloning. Used as fallback when Cartesia is not configured.",
+      logo: <ElevenLabsLogo />,
+      authType: "apikey",
+      testable: false,
+      onConnect: () => setApiKeyProvider("elevenlabs"),
+    },
+  ];
+
   const appDefs: ProviderDef[] = [
     {
       provider: "google",
@@ -226,6 +277,16 @@ export function IntegrationsPage() {
           description="Language models that power agent responses and reasoning."
         >
           {aiModelDefs.map((def) => (
+            <ProviderCard key={def.provider} def={def} integration={byProvider(def.provider)} />
+          ))}
+        </Section>
+
+        {/* Voice */}
+        <Section
+          title="Voice"
+          description="STT and TTS providers for voice calls. These override platform defaults for your org."
+        >
+          {voiceDefs.map((def) => (
             <ProviderCard key={def.provider} def={def} integration={byProvider(def.provider)} />
           ))}
         </Section>

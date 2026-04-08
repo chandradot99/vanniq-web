@@ -206,3 +206,49 @@ export interface ToolInfo {
   input_schema: Record<string, unknown>;
   required_integration: string | null;
 }
+
+// ── Voice ─────────────────────────────────────────────────────────────────────
+
+export interface VoiceConfig {
+  language?: string | null;
+  stt_provider?: string | null;
+  stt_model?: string | null;
+  tts_provider?: string | null;
+  tts_voice_id?: string | null;
+  tts_model?: string | null;
+  tts_speed?: number | null;
+}
+
+export interface PhoneNumber {
+  id: string;
+  org_id: string;
+  agent_id: string;
+  number: string;
+  provider: "twilio" | "vonage" | "telnyx";
+  sid: string;
+  friendly_name: string | null;
+  voice_config: VoiceConfig | null;
+  created_at: string;
+}
+
+export interface VoiceCallSummary {
+  id: string;
+  agent_id: string;
+  status: "active" | "ended";
+  user_id: string;
+  duration_seconds: number | null;
+  sentiment: "positive" | "neutral" | "negative" | null;
+  created_at: string;
+  ended_at: string | null;
+}
+
+export interface VoiceCallListResponse {
+  calls: VoiceCallSummary[];
+  total: number;
+}
+
+export interface OutboundCallResponse {
+  session_id: string;
+  call_sid: string;
+  status: string;
+}

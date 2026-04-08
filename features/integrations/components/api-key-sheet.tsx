@@ -110,6 +110,51 @@ const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
       { name: "Mixtral 8x22B", badge: "MoE",   badgeColor: "text-amber-600 bg-amber-500/8" },
     ],
   },
+  deepgram: {
+    provider: "deepgram",
+    name: "Deepgram",
+    color: "#101010",
+    initial: "D",
+    tagline: "Real-time speech-to-text and text-to-speech. Nova 3 STT + Aura 2 TTS — one API key covers both.",
+    keyPlaceholder: "Token …",
+    docsUrl: "https://console.deepgram.com/",
+    docsLabel: "Get API key from Deepgram Console",
+    models: [
+      { name: "Nova 3 STT",       badge: "STT",     badgeColor: "text-blue-500 bg-blue-500/8" },
+      { name: "Aura 2 TTS",       badge: "TTS",     badgeColor: "text-violet-500 bg-violet-500/8" },
+      { name: "Nova 2 Phone Call", badge: "Voice",  badgeColor: "text-emerald-600 bg-emerald-500/8" },
+    ],
+  },
+  cartesia: {
+    provider: "cartesia",
+    name: "Cartesia",
+    color: "#6c47ff",
+    initial: "C",
+    tagline: "Ultra-low latency TTS built for voice agents. Sonic 2 delivers near-instant, natural-sounding speech.",
+    keyPlaceholder: "sk_car_…",
+    docsUrl: "https://play.cartesia.ai/keys",
+    docsLabel: "Get API key from Cartesia Dashboard",
+    models: [
+      { name: "Sonic 2",            badge: "Latest",  badgeColor: "text-violet-500 bg-violet-500/8" },
+      { name: "Sonic English",      badge: "Fast",    badgeColor: "text-emerald-600 bg-emerald-500/8" },
+      { name: "Sonic Multilingual", badge: "Global",  badgeColor: "text-blue-500 bg-blue-500/8" },
+    ],
+  },
+  elevenlabs: {
+    provider: "elevenlabs",
+    name: "ElevenLabs",
+    color: "#f5a623",
+    initial: "E",
+    tagline: "Industry-leading voice cloning and TTS. Turbo v2.5 optimised for real-time voice agents.",
+    keyPlaceholder: "sk_…",
+    docsUrl: "https://elevenlabs.io/app/settings/api-keys",
+    docsLabel: "Get API key from ElevenLabs",
+    models: [
+      { name: "Turbo v2.5",        badge: "Fastest", badgeColor: "text-emerald-600 bg-emerald-500/8" },
+      { name: "Multilingual v2",   badge: "Global",  badgeColor: "text-blue-500 bg-blue-500/8" },
+      { name: "Turbo v2",          badge: "Fast",    badgeColor: "text-violet-500 bg-violet-500/8" },
+    ],
+  },
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────

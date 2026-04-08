@@ -9,11 +9,13 @@ import type { ProviderSchema, PlatformConfig } from "@/types";
 
 const CATEGORY_LABELS: Record<string, string> = {
   oauth: "OAuth Apps",
+  voice: "Voice Providers",
   observability: "Observability",
 };
 
 const CATEGORY_DESCRIPTIONS: Record<string, string> = {
   oauth: "OAuth app credentials for your deployment. Users connect their accounts using these.",
+  voice: "Platform-level defaults for telephony, STT, and TTS. Orgs can override with their own keys via Integrations.",
   observability: "Monitoring and debugging tools for the platform.",
 };
 
