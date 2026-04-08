@@ -231,6 +231,14 @@ export interface PhoneNumber {
   created_at: string;
 }
 
+export interface TwilioAvailableNumber {
+  number: string;
+  sid: string;
+  friendly_name: string | null;
+  capabilities: { voice: boolean; sms: boolean; mms: boolean };
+  already_imported: boolean;
+}
+
 export interface VoiceCallSummary {
   id: string;
   agent_id: string;

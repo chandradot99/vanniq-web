@@ -1,6 +1,7 @@
 import { api } from "@/lib/api";
 import type {
   PhoneNumber,
+  TwilioAvailableNumber,
   VoiceCallListResponse,
   SessionDetail,
   OutboundCallResponse,
@@ -11,10 +12,14 @@ export const phoneNumbersApi = {
   list: (agentId?: string): Promise<PhoneNumber[]> =>
     api.get(agentId ? `/v1/voice/phone-numbers?agent_id=${agentId}` : "/v1/voice/phone-numbers"),
 
+  listTwilioNumbers: (): Promise<TwilioAvailableNumber[]> =>
+    api.get("/v1/voice/twilio/numbers"),
+
   add: (body: {
     agent_id: string;
     number: string;
     provider?: string;
+    sid?: string;
     friendly_name?: string;
   }): Promise<PhoneNumber> => api.post("/v1/voice/phone-numbers", body),
 

@@ -9,7 +9,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -19,7 +18,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAgents } from "@/features/agents/hooks/use-agents";
-import { useAddPhoneNumber } from "@/features/voice/hooks/use-phone-numbers";
+import { useAddPhoneNumber, useTwilioNumbers } from "@/features/voice/hooks/use-phone-numbers";
+import type { TwilioAvailableNumber } from "@/types";
 
 interface Props {
   open: boolean;
@@ -27,32 +27,44 @@ interface Props {
 }
 
 export function AddPipelineDialog({ open, onClose }: Props) {
-  const [number, setNumber] = useState("");
+  const [selectedNumber, setSelectedNumber] = useState<TwilioAvailableNumber | null>(null);
   const [agentId, setAgentId] = useState("");
-  const [provider, setProvider] = useState("twilio");
-  const [friendlyName, setFriendlyName] = useState("");
 
   const { data: agents = [] } = useAgents();
+  const { data: twilioNumbers = [], isLoading: loadingNumbers, error: numbersError } = useTwilioNumbers();
   const addNumber = useAddPhoneNumber();
+
+  const availableNumbers = twilioNumbers.filter((n) => !n.already_imported);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!selectedNumber) return;
     addNumber.mutate(
-      { agent_id: agentId, number, provider, friendly_name: friendlyName || undefined },
+      {
+        agent_id: agentId,
+        number: selectedNumber.number,
+        provider: "twilio",
+        sid: selectedNumber.sid,
+        friendly_name: selectedNumber.friendly_name || undefined,
+      },
       {
         onSuccess: () => {
-          setNumber("");
+          setSelectedNumber(null);
           setAgentId("");
-          setProvider("twilio");
-          setFriendlyName("");
           onClose();
         },
       }
     );
   }
 
+  function handleClose() {
+    setSelectedNumber(null);
+    setAgentId("");
+    onClose();
+  }
+
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Add Voice Pipeline</DialogTitle>
@@ -61,24 +73,62 @@ export function AddPipelineDialog({ open, onClose }: Props) {
         <form onSubmit={handleSubmit} className="space-y-4 py-1">
           <div className="space-y-1.5">
             <Label htmlFor="number">Phone Number</Label>
-            <Input
-              id="number"
-              placeholder="+14155551234"
-              value={number}
-              onChange={(e) => setNumber(e.target.value)}
-              required
-            />
-            <p className="text-xs text-muted-foreground">E.164 format — include country code</p>
-          </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="friendly-name">Friendly Name <span className="text-muted-foreground">(optional)</span></Label>
-            <Input
-              id="friendly-name"
-              placeholder="Sales Hotline"
-              value={friendlyName}
-              onChange={(e) => setFriendlyName(e.target.value)}
-            />
+            {numbersError ? (
+              <p className="text-sm text-destructive">
+                Could not load Twilio numbers. Add a Twilio integration first.
+              </p>
+            ) : (
+              <Select
+                value={selectedNumber?.number ?? ""}
+                onValueChange={(val) => {
+                  const found = twilioNumbers.find((n) => n.number === val) ?? null;
+                  setSelectedNumber(found);
+                }}
+                disabled={loadingNumbers}
+              >
+                <SelectTrigger id="number" className="w-full">
+                  <SelectValue
+                    placeholder={
+                      loadingNumbers
+                        ? "Loading your Twilio numbers…"
+                        : availableNumbers.length === 0
+                        ? "No available numbers"
+                        : "Select a number…"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableNumbers.map((n) => (
+                    <SelectItem key={n.number} value={n.number}>
+                      <span className="font-mono">{n.number}</span>
+                      {n.friendly_name && (
+                        <span className="ml-2 text-muted-foreground text-xs">
+                          {n.friendly_name}
+                        </span>
+                      )}
+                    </SelectItem>
+                  ))}
+                  {twilioNumbers.some((n) => n.already_imported) && (
+                    <>
+                      <div className="px-2 py-1.5 text-xs text-muted-foreground border-t mt-1">
+                        Already imported
+                      </div>
+                      {twilioNumbers
+                        .filter((n) => n.already_imported)
+                        .map((n) => (
+                          <SelectItem key={n.number} value={n.number} disabled>
+                            <span className="font-mono opacity-50">{n.number}</span>
+                          </SelectItem>
+                        ))}
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Numbers purchased in your Twilio account
+            </p>
           </div>
 
           <div className="space-y-1.5">
@@ -97,25 +147,13 @@ export function AddPipelineDialog({ open, onClose }: Props) {
             </Select>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="provider">Provider</Label>
-            <Select value={provider} onValueChange={setProvider}>
-              <SelectTrigger id="provider" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="twilio">Twilio</SelectItem>
-                <SelectItem value="vonage">Vonage</SelectItem>
-                <SelectItem value="telnyx">Telnyx</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           <DialogFooter>
+            <Button type="button" variant="outline" onClick={handleClose}>
+              Cancel
+            </Button>
             <Button
               type="submit"
-              disabled={!number || !agentId || addNumber.isPending}
-              className="w-full"
+              disabled={!selectedNumber || !agentId || addNumber.isPending}
             >
               {addNumber.isPending ? "Adding…" : "Add Pipeline"}
             </Button>
