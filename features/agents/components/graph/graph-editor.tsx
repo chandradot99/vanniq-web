@@ -32,6 +32,7 @@ import { GraphEditorHeader } from "./graph-editor-header";
 import { NodePalette } from "./node-palette";
 import { NodeConfigPanel } from "./node-config-panel";
 import { ChatTestPanel } from "./chat-test-panel";
+import { VoicePreviewPanel } from "./voice-preview-panel";
 import { SessionsView } from "./sessions-view";
 import { AgentNode } from "./agent-node";
 import { GotoNode } from "./goto-node";
@@ -61,6 +62,7 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isVoiceOpen, setIsVoiceOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"builder" | "sessions">("builder");
 
   const updateGraphMutation = useUpdateGraph(agent.id);
@@ -398,10 +400,24 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
         isDirty={isDirty}
         isSaving={updateGraphMutation.isPending}
         isChatOpen={isChatOpen}
+        isVoiceOpen={isVoiceOpen}
         activeTab={activeTab}
         onSave={handleSave}
-        onToggleChat={() => setIsChatOpen((o) => !o)}
-        onTabChange={(tab) => { setActiveTab(tab); if (tab !== "builder") setIsChatOpen(false); }}
+        onToggleChat={() => {
+          setIsChatOpen((o) => !o);
+          setIsVoiceOpen(false);
+        }}
+        onToggleVoice={() => {
+          setIsVoiceOpen((o) => !o);
+          setIsChatOpen(false);
+        }}
+        onTabChange={(tab) => {
+          setActiveTab(tab);
+          if (tab !== "builder") {
+            setIsChatOpen(false);
+            setIsVoiceOpen(false);
+          }
+        }}
       />
 
       {activeTab === "sessions" ? (
@@ -468,6 +484,17 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
           <div className={`absolute right-0 top-0 h-full z-20 ${isChatOpen ? "" : "hidden"}`}>
             <ChatTestPanel agentId={agent.id} isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
           </div>
+
+          {/* Voice preview panel — mounted on first open, persists until panel is explicitly closed */}
+          {isVoiceOpen && (
+            <div className="absolute right-0 top-0 h-full z-20">
+              <VoicePreviewPanel
+                agentId={agent.id}
+                isOpen={isVoiceOpen}
+                onClose={() => setIsVoiceOpen(false)}
+              />
+            </div>
+          )}
         </div>
       </div>
       )}

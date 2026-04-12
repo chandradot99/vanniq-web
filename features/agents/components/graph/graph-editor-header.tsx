@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Save, MessageSquare, Bug } from "lucide-react";
+import { ArrowLeft, Save, MessageSquare, Bug, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Agent } from "@/types";
@@ -15,13 +15,15 @@ interface Props {
   isDirty: boolean;
   isSaving: boolean;
   isChatOpen: boolean;
+  isVoiceOpen: boolean;
   activeTab: ActiveTab;
   onSave: () => void;
   onToggleChat: () => void;
+  onToggleVoice: () => void;
   onTabChange: (tab: ActiveTab) => void;
 }
 
-export function GraphEditorHeader({ agent, isDirty, isSaving, isChatOpen, activeTab, onSave, onToggleChat, onTabChange }: Props) {
+export function GraphEditorHeader({ agent, isDirty, isSaving, isChatOpen, isVoiceOpen, activeTab, onSave, onToggleChat, onToggleVoice, onTabChange }: Props) {
   const [editValue, setEditValue] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const updateAgent = useUpdateAgent(agent.id);
@@ -107,6 +109,15 @@ export function GraphEditorHeader({ agent, isDirty, isSaving, isChatOpen, active
         )}
         {activeTab === "builder" && (
           <>
+            <Button
+              size="sm"
+              variant={isVoiceOpen ? "default" : "outline"}
+              onClick={onToggleVoice}
+              className="h-8"
+            >
+              <Mic className="h-3.5 w-3.5 mr-1.5" />
+              Test Voice
+            </Button>
             <Button
               size="sm"
               variant={isChatOpen ? "default" : "outline"}

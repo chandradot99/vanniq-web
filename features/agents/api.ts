@@ -55,6 +55,13 @@ export const sessionsApi = {
     api.get(`/v1/chat/sessions/${sessionId}/events`),
 };
 
+export interface VoicePreviewResponse {
+  session_id: string;
+  room_name: string;
+  token: string;
+  livekit_url: string;
+}
+
 export const agentsApi = {
   list: (): Promise<Agent[]> => api.get("/v1/agents"),
   getById: (id: string): Promise<Agent> => api.get(`/v1/agents/${id}`),
@@ -62,4 +69,6 @@ export const agentsApi = {
   update: (id: string, data: UpdateAgentInput): Promise<Agent> => api.patch(`/v1/agents/${id}`, data),
   updateGraph: (id: string, graph: UpdateGraphInput): Promise<Agent> => api.put(`/v1/agents/${id}/graph`, { graph_config: graph }),
   delete: (id: string): Promise<void> => api.delete(`/v1/agents/${id}`),
+  startVoicePreview: (id: string): Promise<VoicePreviewResponse> =>
+    api.post(`/v1/agents/${id}/voice-preview`),
 };
