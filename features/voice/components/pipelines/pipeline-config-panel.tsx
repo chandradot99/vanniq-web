@@ -11,19 +11,14 @@ import { useUpdatePhoneNumberConfig } from "../../hooks/use-phone-numbers";
 const STT_PROVIDERS = [
   { value: "", label: "Auto-detect (org default)" },
   { value: "deepgram", label: "Deepgram" },
-  { value: "assemblyai", label: "AssemblyAI" },
   { value: "openai", label: "OpenAI Whisper" },
-  { value: "azure", label: "Azure Speech" },
   { value: "sarvam", label: "Sarvam AI (Indian languages)" },
 ];
 
 const TTS_PROVIDERS = [
   { value: "", label: "Auto-detect (org default)" },
   { value: "cartesia", label: "Cartesia" },
-  { value: "deepgram", label: "Deepgram Aura" },
   { value: "elevenlabs", label: "ElevenLabs" },
-  { value: "azure", label: "Azure TTS" },
-  { value: "openai", label: "OpenAI TTS" },
   { value: "sarvam", label: "Sarvam AI (Indian languages)" },
 ];
 
@@ -35,18 +30,6 @@ const DEEPGRAM_STT_MODELS = [
   { value: "nova-2-finance", label: "Nova 2 Finance" },
   { value: "enhanced", label: "Enhanced" },
   { value: "base", label: "Base" },
-];
-
-const DEEPGRAM_TTS_VOICES = [
-  { value: "", label: "Default (aura-2-helena-en)" },
-  { value: "aura-2-helena-en", label: "Helena (Female, US)" },
-  { value: "aura-2-thalia-en", label: "Thalia (Female, US)" },
-  { value: "aura-2-luna-en", label: "Luna (Female, US)" },
-  { value: "aura-2-stella-en", label: "Stella (Female, US)" },
-  { value: "aura-2-athena-en", label: "Athena (Female, UK)" },
-  { value: "aura-2-orion-en", label: "Orion (Male, US)" },
-  { value: "aura-2-arcas-en", label: "Arcas (Male, US)" },
-  { value: "aura-2-zeus-en", label: "Zeus (Male, US)" },
 ];
 
 const CARTESIA_MODELS = [
@@ -68,28 +51,6 @@ const OPENAI_STT_MODELS = [
   { value: "gpt-4o-mini-transcribe", label: "GPT-4o Mini Transcribe (fastest)" },
   { value: "gpt-4o-transcribe", label: "GPT-4o Transcribe (most accurate)" },
   { value: "whisper-1", label: "Whisper 1 (stable)" },
-];
-
-const OPENAI_TTS_VOICES = [
-  { value: "", label: "Default (alloy)" },
-  { value: "alloy", label: "Alloy (Neutral)" },
-  { value: "echo", label: "Echo (Male)" },
-  { value: "fable", label: "Fable (British Male)" },
-  { value: "onyx", label: "Onyx (Deep Male)" },
-  { value: "nova", label: "Nova (Female)" },
-  { value: "shimmer", label: "Shimmer (Female)" },
-  { value: "ash", label: "Ash (Male)" },
-  { value: "ballad", label: "Ballad (Male)" },
-  { value: "coral", label: "Coral (Female)" },
-  { value: "sage", label: "Sage (Female)" },
-  { value: "verse", label: "Verse (Male)" },
-];
-
-const OPENAI_TTS_MODELS = [
-  { value: "", label: "Default (tts-1)" },
-  { value: "tts-1", label: "TTS-1 (fastest, lower quality)" },
-  { value: "tts-1-hd", label: "TTS-1 HD (higher quality)" },
-  { value: "gpt-4o-mini-tts", label: "GPT-4o Mini TTS (latest)" },
 ];
 
 const LANGUAGES = [
@@ -168,21 +129,18 @@ export function PipelineConfigPanel({ phoneNumber, onClose }: Props) {
     );
   }
 
-  // Providers that expose a fixed voice dropdown (vs. free-text voice ID)
-  const ttsVoiceOptions =
-    form.tts_provider === "deepgram" ? DEEPGRAM_TTS_VOICES :
-    form.tts_provider === "openai" ? OPENAI_TTS_VOICES :
-    null;
+  // No supported TTS provider currently exposes a fixed voice dropdown
+  // (Cartesia/ElevenLabs use free-text voice IDs; Sarvam has no per-number voice)
+  const ttsVoiceOptions = null;
 
   // Providers that expose a model dropdown
   const ttsModelOptions =
     form.tts_provider === "cartesia" ? CARTESIA_MODELS :
     form.tts_provider === "elevenlabs" ? ELEVENLABS_MODELS :
-    form.tts_provider === "openai" ? OPENAI_TTS_MODELS :
     null;
 
   // Providers where voice is configured via the agent, not per-number (no voice field)
-  const ttsVoiceIsAgentLevel = form.tts_provider === "azure" || form.tts_provider === "sarvam";
+  const ttsVoiceIsAgentLevel = form.tts_provider === "sarvam";
 
   // Providers that expose an STT model dropdown
   const sttModelOptions =
