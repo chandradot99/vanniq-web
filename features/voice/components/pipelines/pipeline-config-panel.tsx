@@ -25,6 +25,7 @@ const TTS_PROVIDERS = [
 const DEEPGRAM_STT_MODELS = [
   { value: "", label: "Default (nova-3)" },
   { value: "nova-3", label: "Nova 3 (latest)" },
+  { value: "nova-3-phonecall", label: "Nova 3 Phone Call (recommended for PSTN)" },
   { value: "nova-2", label: "Nova 2" },
   { value: "nova-2-phonecall", label: "Nova 2 Phone Call" },
   { value: "nova-2-finance", label: "Nova 2 Finance" },
