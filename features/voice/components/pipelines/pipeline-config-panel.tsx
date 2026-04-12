@@ -12,6 +12,9 @@ const STT_PROVIDERS = [
   { value: "", label: "Auto-detect (org default)" },
   { value: "deepgram", label: "Deepgram" },
   { value: "assemblyai", label: "AssemblyAI" },
+  { value: "openai", label: "OpenAI Whisper" },
+  { value: "azure", label: "Azure Speech" },
+  { value: "sarvam", label: "Sarvam AI (Indian languages)" },
 ];
 
 const TTS_PROVIDERS = [
@@ -20,6 +23,8 @@ const TTS_PROVIDERS = [
   { value: "deepgram", label: "Deepgram Aura" },
   { value: "elevenlabs", label: "ElevenLabs" },
   { value: "azure", label: "Azure TTS" },
+  { value: "openai", label: "OpenAI TTS" },
+  { value: "sarvam", label: "Sarvam AI (Indian languages)" },
 ];
 
 const DEEPGRAM_STT_MODELS = [
@@ -56,6 +61,35 @@ const ELEVENLABS_MODELS = [
   { value: "eleven_turbo_v2_5", label: "Turbo v2.5 (fastest)" },
   { value: "eleven_turbo_v2", label: "Turbo v2" },
   { value: "eleven_multilingual_v2", label: "Multilingual v2" },
+];
+
+const OPENAI_STT_MODELS = [
+  { value: "", label: "Default (gpt-4o-mini-transcribe)" },
+  { value: "gpt-4o-mini-transcribe", label: "GPT-4o Mini Transcribe (fastest)" },
+  { value: "gpt-4o-transcribe", label: "GPT-4o Transcribe (most accurate)" },
+  { value: "whisper-1", label: "Whisper 1 (stable)" },
+];
+
+const OPENAI_TTS_VOICES = [
+  { value: "", label: "Default (alloy)" },
+  { value: "alloy", label: "Alloy (Neutral)" },
+  { value: "echo", label: "Echo (Male)" },
+  { value: "fable", label: "Fable (British Male)" },
+  { value: "onyx", label: "Onyx (Deep Male)" },
+  { value: "nova", label: "Nova (Female)" },
+  { value: "shimmer", label: "Shimmer (Female)" },
+  { value: "ash", label: "Ash (Male)" },
+  { value: "ballad", label: "Ballad (Male)" },
+  { value: "coral", label: "Coral (Female)" },
+  { value: "sage", label: "Sage (Female)" },
+  { value: "verse", label: "Verse (Male)" },
+];
+
+const OPENAI_TTS_MODELS = [
+  { value: "", label: "Default (tts-1)" },
+  { value: "tts-1", label: "TTS-1 (fastest, lower quality)" },
+  { value: "tts-1-hd", label: "TTS-1 HD (higher quality)" },
+  { value: "gpt-4o-mini-tts", label: "GPT-4o Mini TTS (latest)" },
 ];
 
 const LANGUAGES = [
@@ -134,10 +168,26 @@ export function PipelineConfigPanel({ phoneNumber, onClose }: Props) {
     );
   }
 
-  const ttsVoiceOptions = form.tts_provider === "deepgram" ? DEEPGRAM_TTS_VOICES : null;
+  // Providers that expose a fixed voice dropdown (vs. free-text voice ID)
+  const ttsVoiceOptions =
+    form.tts_provider === "deepgram" ? DEEPGRAM_TTS_VOICES :
+    form.tts_provider === "openai" ? OPENAI_TTS_VOICES :
+    null;
+
+  // Providers that expose a model dropdown
   const ttsModelOptions =
     form.tts_provider === "cartesia" ? CARTESIA_MODELS :
     form.tts_provider === "elevenlabs" ? ELEVENLABS_MODELS :
+    form.tts_provider === "openai" ? OPENAI_TTS_MODELS :
+    null;
+
+  // Providers where voice is configured via the agent, not per-number (no voice field)
+  const ttsVoiceIsAgentLevel = form.tts_provider === "azure" || form.tts_provider === "sarvam";
+
+  // Providers that expose an STT model dropdown
+  const sttModelOptions =
+    form.stt_provider === "deepgram" ? DEEPGRAM_STT_MODELS :
+    form.stt_provider === "openai" ? OPENAI_STT_MODELS :
     null;
 
   return (
@@ -179,7 +229,7 @@ export function PipelineConfigPanel({ phoneNumber, onClose }: Props) {
                 {STT_PROVIDERS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
               </select>
             </div>
-            {form.stt_provider === "deepgram" && (
+            {sttModelOptions && (
               <div>
                 <label className="text-xs text-muted-foreground block mb-1">Model</label>
                 <select
@@ -187,7 +237,7 @@ export function PipelineConfigPanel({ phoneNumber, onClose }: Props) {
                   onChange={(e) => set("stt_model", e.target.value)}
                   className="w-full h-8 rounded-md border border-input bg-background px-2 text-xs"
                 >
-                  {DEEPGRAM_STT_MODELS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+                  {sttModelOptions.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
                 </select>
               </div>
             )}
@@ -222,7 +272,7 @@ export function PipelineConfigPanel({ phoneNumber, onClose }: Props) {
               </div>
             )}
 
-            {!ttsVoiceOptions && form.tts_provider && form.tts_provider !== "azure" && (
+            {!ttsVoiceOptions && form.tts_provider && !ttsVoiceIsAgentLevel && (
               <div>
                 <label className="text-xs text-muted-foreground block mb-1">Voice ID</label>
                 <input
