@@ -5,13 +5,6 @@
 **Backend repo:** `github.com/chandradot99/vaaniq` (FastAPI, runs on port 8000)
 **This repo:** `github.com/chandradot99/vaaniq-web` (Next.js, runs on port 3000)
 
-## Active Feature Work
-
-**→ Read [`PLAN.md`](./PLAN.md) before touching anything in `features/agents/`**
-
-The visual agent builder (React Flow canvas) is in progress. PLAN.md has the full implementation status, file map, backend API contract, and known issues.
-
----
 
 ## Tech Stack
 
@@ -57,7 +50,7 @@ features/                    ← ALL business logic lives here (feature-based ar
       agent-card.tsx         ← Link to /agents/[id], delete stops propagation
       create-agent-form.tsx  ← name + language only; on success → /agents/[id]
       agent-detail.tsx       ← loading state + <GraphEditor>
-      graph/                 ← React Flow visual editor (see PLAN.md for full file list)
+      graph/                 ← React Flow visual editor
         graph-editor.tsx
         graph-editor-header.tsx
         agent-node.tsx
