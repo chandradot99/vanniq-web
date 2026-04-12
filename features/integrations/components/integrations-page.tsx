@@ -201,7 +201,7 @@ export function IntegrationsPage() {
     {
       provider: "deepgram",
       name: "Deepgram",
-      description: "Speech-to-text for your agent's voice calls. Overrides the platform default Deepgram key for your org.",
+      description: "Speech-to-text for your agent's voice calls. Low-latency Nova models, optimised for phone and WebRTC audio.",
       logo: <DeepgramLogo />,
       authType: "apikey",
       testable: false,
@@ -210,7 +210,7 @@ export function IntegrationsPage() {
     {
       provider: "cartesia",
       name: "Cartesia",
-      description: "Low-latency text-to-speech. Bring your own Cartesia key for voice calls.",
+      description: "Ultra-low-latency text-to-speech. Sonic models deliver sub-100 ms first audio, ideal for real-time voice agents.",
       logo: <CartesiaLogo />,
       authType: "apikey",
       testable: false,
@@ -219,7 +219,7 @@ export function IntegrationsPage() {
     {
       provider: "elevenlabs",
       name: "ElevenLabs",
-      description: "Realistic TTS with voice cloning. Used as fallback when Cartesia is not configured.",
+      description: "High-quality text-to-speech with voice cloning. Best for lifelike, expressive agent voices.",
       logo: <ElevenLabsLogo />,
       authType: "apikey",
       testable: false,
@@ -284,7 +284,7 @@ export function IntegrationsPage() {
         {/* Voice */}
         <Section
           title="Voice"
-          description="STT and TTS providers for voice calls. These override platform defaults for your org."
+          description="STT and TTS providers for your voice agents. Your keys are used for all calls made by your organisation."
         >
           {voiceDefs.map((def) => (
             <ProviderCard key={def.provider} def={def} integration={byProvider(def.provider)} />

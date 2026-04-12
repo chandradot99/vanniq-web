@@ -14,9 +14,9 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 const CATEGORY_DESCRIPTIONS: Record<string, string> = {
-  oauth: "OAuth app credentials for your deployment. Users connect their accounts using these.",
-  voice: "Platform-level defaults for telephony, STT, and TTS. Orgs can override with their own keys via Integrations.",
-  observability: "Monitoring and debugging tools for the platform.",
+  oauth: "OAuth app registrations for this deployment. Required before users can connect their Google or Slack accounts via Integrations.",
+  voice: "Default voice provider credentials for this deployment. Used for calls where an organisation has not connected their own credentials via Integrations.",
+  observability: "Monitoring and tracing tools for the platform. Applied globally across all agent runs.",
 };
 
 function Section({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
@@ -127,7 +127,7 @@ export function AdminPage() {
           <div>
             <h1 className="text-xl font-semibold">Platform Settings</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Configure platform-level credentials for OAuth apps and external services. These apply to all users of this deployment.
+              Deployment-wide credentials and service registrations. These apply to all organisations on this instance.
             </p>
           </div>
         </div>
