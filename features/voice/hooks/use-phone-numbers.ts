@@ -5,11 +5,12 @@ import { phoneNumbersApi } from "@/features/voice/api";
 
 const QK = "phone-numbers";
 
-export function useTwilioNumbers() {
+export function useTwilioNumbers({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: [QK, "twilio-available"],
     queryFn: phoneNumbersApi.listTwilioNumbers,
     staleTime: 30_000,  // cache for 30s — Twilio list rarely changes mid-session
+    enabled,
   });
 }
 
