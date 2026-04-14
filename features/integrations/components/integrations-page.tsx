@@ -1,17 +1,30 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
 import { PageHeader } from "@/components/layout/page-header";
 import { PageBody } from "@/components/layout/page-body";
+import { cn } from "@/lib/utils";
 import { useIntegrations } from "../hooks/use-integrations";
 import { integrationsApi } from "../api";
 import { ProviderCard } from "./provider-card";
 import type { ProviderDef } from "./provider-card";
 import { ApiKeyDialog } from "./api-key-dialog";
-import { cn } from "@/lib/utils";
 import type { Integration } from "@/types";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type Tab = "services" | "connected-apps";
+type StatusFilter = "all" | "connected" | "not-connected";
 
 // ── Provider logos ────────────────────────────────────────────────────────────
 
@@ -36,9 +49,7 @@ function GoogleLogo() {
   );
 }
 
-// ── Provider definitions ──────────────────────────────────────────────────────
-
-type Tab = "provider-keys" | "connected-apps";
+// ── Section component ─────────────────────────────────────────────────────────
 
 interface SectionProps {
   title: string;
@@ -50,7 +61,7 @@ function Section({ title, description, children }: SectionProps) {
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="text-sm font-semibold">{title}</h2>
+        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{title}</h2>
         <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -62,18 +73,31 @@ function Section({ title, description, children }: SectionProps) {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
+const SERVICE_SECTIONS = [
+  { key: "ai-models", label: "AI Models", description: "Language models that power agent responses and reasoning." },
+  { key: "voice",     label: "Voice",     description: "STT and TTS providers for voice agents. Your keys are used for all calls made by your organisation." },
+  { key: "telephony", label: "Telephony", description: "Phone number providers for inbound and outbound calls." },
+  { key: "messaging", label: "Messaging", description: "WhatsApp and messaging channels for your agents." },
+];
+
 export function IntegrationsPage() {
   const [apiKeyProvider, setApiKeyProvider] = useState<string | null>(null);
   const [connectingOAuth, setConnectingOAuth] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [typeFilter, setTypeFilter] = useState("all");
 
   const { data: integrations = [], isLoading } = useIntegrations();
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const activeTab = (searchParams.get("tab") as Tab) ?? "provider-keys";
+  const activeTab = (searchParams.get("tab") as Tab) ?? "services";
 
   function setTab(tab: Tab) {
     router.replace(`/integrations?tab=${tab}`);
+    setSearch("");
+    setStatusFilter("all");
+    setTypeFilter("all");
   }
 
   // Handle OAuth callback redirects
@@ -99,6 +123,10 @@ export function IntegrationsPage() {
     return integrations.find((i) => i.provider === provider);
   }
 
+  function isConnected(provider: string) {
+    return !!byProvider(provider);
+  }
+
   async function handleOAuthConnect(provider: string) {
     setConnectingOAuth(provider);
     try {
@@ -110,7 +138,7 @@ export function IntegrationsPage() {
     }
   }
 
-  // ── Provider Keys definitions ───────────────────────────────────────────────
+  // ── Provider definitions ────────────────────────────────────────────────────
 
   const aiModelDefs: ProviderDef[] = [
     {
@@ -144,7 +172,7 @@ export function IntegrationsPage() {
       provider: "gemini",
       name: "Google Gemini",
       description: "Gemini 1.5 Pro and Flash for multimodal and long-context flows.",
-      logo: <Logo bg="bg-[#4285F4]" text="G" />,
+      logo: <Logo bg="bg-[#4285F4]" text="Ge" />,
       authType: "apikey",
       testable: true,
       onConnect: () => setApiKeyProvider("gemini"),
@@ -241,8 +269,6 @@ export function IntegrationsPage() {
     },
   ];
 
-  // ── Connected Apps definitions ──────────────────────────────────────────────
-
   const connectedAppDefs: ProviderDef[] = [
     {
       provider: "google",
@@ -290,6 +316,56 @@ export function IntegrationsPage() {
     },
   ];
 
+  // ── Section defs map ────────────────────────────────────────────────────────
+
+  const sectionDefsMap: Record<string, ProviderDef[]> = {
+    "ai-models": aiModelDefs,
+    "voice":     voiceDefs,
+    "telephony": telephonyDefs,
+    "messaging": messagingDefs,
+  };
+
+  // ── Filtering & sorting ─────────────────────────────────────────────────────
+
+  function filterAndSort(defs: ProviderDef[]): ProviderDef[] {
+    return defs
+      .filter((def) => {
+        const matchesSearch = def.name.toLowerCase().includes(search.toLowerCase());
+        const connected = isConnected(def.provider);
+        const matchesStatus =
+          statusFilter === "all" ||
+          (statusFilter === "connected" && connected) ||
+          (statusFilter === "not-connected" && !connected);
+        return matchesSearch && matchesStatus;
+      })
+      .sort((a, b) => (isConnected(b.provider) ? 1 : 0) - (isConnected(a.provider) ? 1 : 0));
+  }
+
+  const allServiceDefs = [...aiModelDefs, ...voiceDefs, ...telephonyDefs, ...messagingDefs];
+  const activeTabDefs = activeTab === "services" ? allServiceDefs : connectedAppDefs;
+  const connectedCount = activeTabDefs.filter((d) => isConnected(d.provider)).length;
+
+  // Which sections to show based on typeFilter
+  const visibleSections = activeTab === "services"
+    ? (typeFilter === "all" ? SERVICE_SECTIONS : SERVICE_SECTIONS.filter((s) => s.key === typeFilter))
+    : [];
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const filteredConnectedApps = useMemo(() => filterAndSort(connectedAppDefs), [connectedAppDefs, search, statusFilter, integrations]);
+
+  const STATUS_FILTERS: { id: StatusFilter; label: string }[] = [
+    { id: "all", label: "All" },
+    { id: "connected", label: `Connected (${connectedCount})` },
+    { id: "not-connected", label: "Not connected" },
+  ];
+
+  const typeOptions = activeTab === "services"
+    ? [
+        { value: "all", label: "All Types" },
+        ...SERVICE_SECTIONS.map((s) => ({ value: s.key, label: s.label })),
+      ]
+    : null;
+
   if (isLoading) {
     return (
       <div className="h-full flex flex-col">
@@ -322,7 +398,7 @@ export function IntegrationsPage() {
       {/* Tabs */}
       <div className="shrink-0 border-b border-border bg-background">
         <div className="max-w-[1600px] mx-auto px-8 flex gap-0">
-          {(["provider-keys", "connected-apps"] as Tab[]).map((tab) => (
+          {(["services", "connected-apps"] as Tab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setTab(tab)}
@@ -333,72 +409,109 @@ export function IntegrationsPage() {
                   : "border-transparent text-muted-foreground hover:text-foreground"
               )}
             >
-              {tab === "provider-keys" ? "Provider Keys" : "Connected Apps"}
+              {tab === "services" ? "Services" : "Connected Apps"}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Tab content */}
       <PageBody>
-        {activeTab === "provider-keys" ? (
+        {/* Filters */}
+        <div className="flex items-center gap-2 mb-6">
+          <div className="relative max-w-xs w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              placeholder="Search..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-8 h-8 text-sm"
+            />
+          </div>
+
+          {typeOptions && (
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="h-8 text-sm min-w-[140px]">
+                <span className="flex-1 text-left text-sm">
+                  {typeOptions.find((o) => o.value === typeFilter)?.label}
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                {typeOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          <div className="flex items-center gap-1.5 ml-auto">
+            {STATUS_FILTERS.map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setStatusFilter(f.id)}
+                className={cn(
+                  "px-3 py-1 rounded-full text-xs font-medium transition-colors",
+                  statusFilter === f.id
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Content */}
+        {activeTab === "services" ? (
           <div className="space-y-10">
-            <Section
-              title="AI Models"
-              description="Language models that power agent responses and reasoning."
-            >
-              {aiModelDefs.map((def) => (
-                <ProviderCard key={def.provider} def={def} integration={byProvider(def.provider)} />
-              ))}
-            </Section>
+            {visibleSections.map((section) => {
+              const defs = filterAndSort(sectionDefsMap[section.key]);
+              if (defs.length === 0) return null;
+              return (
+                <Section key={section.key} title={section.label} description={section.description}>
+                  {defs.map((def) => (
+                    <ProviderCard key={def.provider} def={def} integration={byProvider(def.provider)} />
+                  ))}
+                </Section>
+              );
+            })}
 
-            <Section
-              title="Voice"
-              description="STT and TTS providers for voice agents. Your keys are used for all calls made by your organisation."
-            >
-              {voiceDefs.map((def) => (
-                <ProviderCard key={def.provider} def={def} integration={byProvider(def.provider)} />
-              ))}
-            </Section>
-
-            <Section
-              title="Telephony"
-              description="Phone number providers for inbound and outbound calls."
-            >
-              {telephonyDefs.map((def) => (
-                <ProviderCard key={def.provider} def={def} integration={byProvider(def.provider)} />
-              ))}
-            </Section>
-
-            <Section
-              title="Messaging"
-              description="WhatsApp and messaging channels for your agents."
-            >
-              {messagingDefs.map((def) => (
-                <ProviderCard key={def.provider} def={def} integration={byProvider(def.provider)} />
-              ))}
-            </Section>
+            {visibleSections.every((s) => filterAndSort(sectionDefsMap[s.key]).length === 0) && (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <p className="text-sm font-medium">No integrations found</p>
+                <p className="text-xs text-muted-foreground mt-1">Try a different search or filter</p>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-10">
-            <Section
-              title="Connected Apps"
-              description="Connect your organisation's accounts so agents can take actions on your behalf."
-            >
-              {connectedAppDefs.map((def) => (
-                <ProviderCard
-                  key={def.provider}
-                  def={{
-                    ...def,
-                    onConnect:
-                      def.provider === "google" && connectingOAuth === "google"
-                        ? () => {}
-                        : def.onConnect,
-                  }}
-                  integration={byProvider(def.provider)}
-                />
-              ))}
-            </Section>
+            {filteredConnectedApps.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <p className="text-sm font-medium">No integrations found</p>
+                <p className="text-xs text-muted-foreground mt-1">Try a different search or filter</p>
+              </div>
+            ) : (
+              <Section
+                title="Connected Apps"
+                description="Connect your organisation's accounts so agents can take actions on your behalf."
+              >
+                {filteredConnectedApps.map((def) => (
+                  <ProviderCard
+                    key={def.provider}
+                    def={{
+                      ...def,
+                      onConnect:
+                        def.provider === "google" && connectingOAuth === "google"
+                          ? () => {}
+                          : def.onConnect,
+                    }}
+                    integration={byProvider(def.provider)}
+                  />
+                ))}
+              </Section>
+            )}
           </div>
         )}
       </PageBody>

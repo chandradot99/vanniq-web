@@ -31,8 +31,8 @@ export function ProviderCard({ def, integration }: ProviderCardProps) {
   const connectedInfo = accountEmail ?? keyHint;
 
   return (
-    <Card className="flex flex-col">
-      <CardContent className="px-5 py-3 flex flex-col flex-1 gap-3">
+    <Card className="py-0">
+      <CardContent className="p-4 flex flex-col gap-2">
         {/* Header: logo + name */}
         <div className="flex items-center gap-3">
           {def.logo}
@@ -43,12 +43,12 @@ export function ProviderCard({ def, integration }: ProviderCardProps) {
         </div>
 
         {/* Description */}
-        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3 flex-1">
+        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
           {def.description}
         </p>
 
         {/* Footer: status + actions */}
-        <div className="flex items-center justify-between pt-3 border-t border-border/60">
+        <div className="flex items-center justify-between border-t border-border/60 pt-2">
           {isConnected ? (
             <span className="text-xs text-muted-foreground font-mono truncate max-w-[120px]">
               {connectedInfo ?? "Connected"}
