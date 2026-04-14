@@ -82,7 +82,7 @@ function ProviderCard({
 
   return (
     <Card className="flex flex-col">
-      <CardContent className="p-5 flex flex-col flex-1 gap-4">
+      <CardContent className="px-5 py-3 flex flex-col flex-1 gap-3">
         {/* Header: logo + name */}
         <div className="flex items-center gap-3">
           {logo}
@@ -191,7 +191,7 @@ export function AdminPage() {
         </div>
 
         <PageBody>
-          <div className="space-y-4">
+          <div className="space-y-6">
             {/* Tab description */}
             {activeTabDef && (
               <p className="text-sm text-muted-foreground">{activeTabDef.description}</p>

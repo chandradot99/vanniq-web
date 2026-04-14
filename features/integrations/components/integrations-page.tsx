@@ -295,7 +295,7 @@ export function IntegrationsPage() {
       <div className="h-full flex flex-col">
         <PageHeader title="Integrations" description="Connect AI providers, voice services, and external apps." />
         <PageBody>
-          <div className="space-y-4">
+          <div className="space-y-8">
             {[...Array(2)].map((_, i) => (
               <div key={i} className="space-y-3">
                 <div className="h-4 w-24 bg-muted rounded animate-pulse" />
@@ -342,7 +342,7 @@ export function IntegrationsPage() {
       {/* Tab content */}
       <PageBody>
         {activeTab === "provider-keys" ? (
-          <div className="space-y-6">
+          <div className="space-y-10">
             <Section
               title="AI Models"
               description="Language models that power agent responses and reasoning."
@@ -380,7 +380,7 @@ export function IntegrationsPage() {
             </Section>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-10">
             <Section
               title="Connected Apps"
               description="Connect your organisation's accounts so agents can take actions on your behalf."
