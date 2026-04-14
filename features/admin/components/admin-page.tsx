@@ -88,55 +88,63 @@ function ProviderCard({
     );
 
   return (
-    <Card>
-      <CardContent className="p-5">
-        <div className="flex items-start gap-4">
+    <Card className="flex flex-col">
+      <CardContent className="p-5 flex flex-col flex-1 gap-4">
+        {/* Header: logo + name */}
+        <div className="flex items-center gap-3">
           {logo}
+          <span className="font-semibold text-sm leading-tight">{schema.display_name}</span>
+        </div>
 
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-0.5">
-              <span className="font-semibold text-sm">{schema.display_name}</span>
-              {configured && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />}
-            </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">{schema.description}</p>
-          </div>
+        {/* Description — clamped so cards stay uniform height */}
+        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3 flex-1">
+          {schema.description}
+        </p>
 
-          <div className="shrink-0">
-            {configured ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5",
-                    "text-xs font-medium shadow-xs hover:bg-accent hover:text-accent-foreground",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    "cursor-pointer transition-colors"
-                  )}
+        {/* Footer: status + actions */}
+        <div className="flex items-center justify-between pt-3 border-t border-border/60">
+          {configured ? (
+            <span className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Configured
+            </span>
+          ) : (
+            <span className="text-xs text-muted-foreground">Not configured</span>
+          )}
+
+          {configured ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-md border border-input bg-background px-2.5 py-1.5",
+                  "text-xs font-medium hover:bg-accent hover:text-accent-foreground",
+                  "focus-visible:outline-none cursor-pointer transition-colors"
+                )}
+              >
+                <Settings className="h-3 w-3" />
+                Manage
+                <MoreHorizontal className="h-3 w-3 ml-0.5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuItem onClick={onConfigure}>
+                  <Settings className="h-3.5 w-3.5 mr-2" />
+                  Update
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={onDelete}
                 >
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                  Configured
-                  <MoreHorizontal className="h-3.5 w-3.5 ml-0.5" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-40">
-                  <DropdownMenuItem onClick={onConfigure}>
-                    <Settings className="h-3.5 w-3.5 mr-2" />
-                    Update
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-destructive focus:text-destructive"
-                    onClick={onDelete}
-                  >
-                    <Trash2 className="h-3.5 w-3.5 mr-2" />
-                    Remove
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <Button size="sm" onClick={onConfigure}>
-                Configure
-              </Button>
-            )}
-          </div>
+                  <Trash2 className="h-3.5 w-3.5 mr-2" />
+                  Remove
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button size="sm" onClick={onConfigure}>
+              Configure
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
