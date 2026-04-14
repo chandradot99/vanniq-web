@@ -72,21 +72,13 @@ export function PlatformConfigSheet({ schema, existing, onOpenChange }: Props) {
           <>
             <SheetHeader className="pb-6 border-b border-border">
               <SheetTitle className="text-base">{schema.display_name}</SheetTitle>
-              <SheetDescription asChild>
-                <div className="space-y-2 text-sm leading-relaxed">
-                  <p>{schema.description}</p>
-                  {schema.category === "voice" && (
-                    <p className="text-xs text-muted-foreground">
-                      This is the deployment default. Organisations that connect their own{" "}
-                      {schema.display_name} credentials via Integrations will use those instead.
-                    </p>
-                  )}
-                  {existing && (
-                    <p className="text-xs text-muted-foreground">
-                      Leave secret fields empty to keep the current values.
-                    </p>
-                  )}
-                </div>
+              <SheetDescription className="text-sm leading-relaxed">
+                {schema.description}
+                {existing && (
+                  <span className="block mt-2 text-xs text-muted-foreground">
+                    Leave secret fields empty to keep the current values.
+                  </span>
+                )}
               </SheetDescription>
             </SheetHeader>
 

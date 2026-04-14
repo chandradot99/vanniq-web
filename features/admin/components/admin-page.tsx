@@ -1,57 +1,76 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle, Circle, Trash2, Info } from "lucide-react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { CheckCircle2, MoreHorizontal, Settings, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
 import { PageBody } from "@/components/layout/page-body";
+import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { usePlatformSchemas, usePlatformConfigs, useDeletePlatformConfig } from "../hooks/use-admin";
 import { PlatformConfigSheet } from "./platform-config-sheet";
 import type { ProviderSchema, PlatformConfig } from "@/types";
 
-const CATEGORY_LABELS: Record<string, string> = {
-  oauth: "OAuth Apps",
-  voice: "Voice & Telephony",
-  observability: "Observability",
-};
+// ── Tabs ──────────────────────────────────────────────────────────────────────
 
-const CATEGORY_DESCRIPTIONS: Record<string, string> = {
-  oauth: "OAuth app registrations shared by all organisations on this instance. Required before users can connect Google Calendar, Gmail, or Slack via Integrations.",
-  voice: "Default STT, TTS, and telephony credentials for this instance. All voice calls fall back to these unless an organisation has connected their own provider keys via Integrations.",
-  observability: "Monitoring and tracing applied globally to all agent runs on this instance.",
-};
+type Tab = "voice" | "oauth" | "observability";
 
-function EnvCallout() {
+const TABS: { id: Tab; label: string; description: string }[] = [
+  {
+    id: "voice",
+    label: "Voice & Telephony",
+    description:
+      "Default STT, TTS, and telephony credentials for this deployment. All voice calls fall back to these unless an organisation has connected their own credentials via Integrations.",
+  },
+  {
+    id: "oauth",
+    label: "OAuth Apps",
+    description:
+      "OAuth app registrations shared by all organisations on this instance. Required before users can connect Google Calendar, Gmail, or Slack via Integrations.",
+  },
+  {
+    id: "observability",
+    label: "Observability",
+    description:
+      "Monitoring and tracing applied globally to all agent runs on this instance.",
+  },
+];
+
+// ── Provider logos ────────────────────────────────────────────────────────────
+
+function LogoBadge({ bg, text }: { bg: string; text: string }) {
   return (
-    <div className="flex gap-3 p-4 rounded-xl border border-border bg-muted/40">
-      <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-      <div className="space-y-1">
-        <p className="text-sm font-medium">Replaces environment variables</p>
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          Credentials configured here are applied deployment-wide — no{" "}
-          <code className="font-mono bg-muted px-1 py-0.5 rounded text-[11px]">.env</code> edits
-          required. Organisations can override any credential via{" "}
-          <strong className="text-foreground font-medium">Integrations</strong>; those always take
-          priority over these platform defaults.
-        </p>
-      </div>
+    <div
+      className={`w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0 ${bg}`}
+    >
+      {text}
     </div>
   );
 }
 
-function Section({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-sm font-semibold">{title}</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
-      </div>
-      <div className="space-y-2">{children}</div>
-    </div>
-  );
-}
+const PROVIDER_LOGOS: Record<string, React.ReactNode> = {
+  deepgram:   <LogoBadge bg="bg-[#101010]" text="Dg" />,
+  cartesia:   <LogoBadge bg="bg-[#7c3aed]" text="Ca" />,
+  elevenlabs: <LogoBadge bg="bg-[#1a1a1a]" text="11" />,
+  sarvam:     <LogoBadge bg="bg-[#f97316]" text="Sa" />,
+  twilio:     <LogoBadge bg="bg-[#f22f46]" text="Tw" />,
+  google:     <LogoBadge bg="bg-[#4285F4]" text="G" />,
+  slack:      <LogoBadge bg="bg-[#4a154b]" text="Sl" />,
+  langsmith:  <LogoBadge bg="bg-[#1868db]" text="Ls" />,
+  sentry:     <LogoBadge bg="bg-[#362d59]" text="Se" />,
+};
 
-function ProviderRow({
+// ── Provider card ─────────────────────────────────────────────────────────────
+
+function ProviderCard({
   schema,
   config,
   onConfigure,
@@ -63,47 +82,79 @@ function ProviderRow({
   onDelete: () => void;
 }) {
   const configured = !!config;
+  const logo =
+    PROVIDER_LOGOS[schema.provider] ?? (
+      <LogoBadge bg="bg-muted-foreground/20" text={schema.display_name[0].toUpperCase()} />
+    );
 
   return (
-    <div className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">{schema.display_name}</span>
-          {configured ? (
-            <span className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
-              <CheckCircle className="h-3 w-3" />
-              Configured
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-              <Circle className="h-3 w-3" />
-              Not configured
-            </span>
-          )}
-        </div>
-        <p className="text-xs text-muted-foreground mt-0.5 truncate">{schema.description}</p>
-      </div>
+    <Card>
+      <CardContent className="p-5">
+        <div className="flex items-start gap-4">
+          {logo}
 
-      <div className="flex items-center gap-2 shrink-0">
-        {configured && (
-          <button
-            onClick={onDelete}
-            className="text-muted-foreground hover:text-destructive transition-colors p-1"
-            title="Remove configuration"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        )}
-        <Button size="sm" variant={configured ? "outline" : "default"} onClick={onConfigure}>
-          {configured ? "Update" : "Configure"}
-        </Button>
-      </div>
-    </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="font-semibold text-sm">{schema.display_name}</span>
+              {configured && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />}
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">{schema.description}</p>
+          </div>
+
+          <div className="shrink-0">
+            {configured ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5",
+                    "text-xs font-medium shadow-xs hover:bg-accent hover:text-accent-foreground",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    "cursor-pointer transition-colors"
+                  )}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                  Configured
+                  <MoreHorizontal className="h-3.5 w-3.5 ml-0.5" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40">
+                  <DropdownMenuItem onClick={onConfigure}>
+                    <Settings className="h-3.5 w-3.5 mr-2" />
+                    Update
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={onDelete}
+                  >
+                    <Trash2 className="h-3.5 w-3.5 mr-2" />
+                    Remove
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button size="sm" onClick={onConfigure}>
+                Configure
+              </Button>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
+// ── Main page ─────────────────────────────────────────────────────────────────
+
 export function AdminPage() {
   const [activeSchema, setActiveSchema] = useState<ProviderSchema | null>(null);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const activeTab = (searchParams.get("tab") as Tab) ?? "voice";
+
+  function setTab(tab: Tab) {
+    router.replace(`/settings/platform?tab=${tab}`);
+  }
 
   const { data: schemas = [], isLoading: schemasLoading } = usePlatformSchemas();
   const { data: configs = [], isLoading: configsLoading } = usePlatformConfigs();
@@ -115,55 +166,59 @@ export function AdminPage() {
     return configs.find((c) => c.provider === provider);
   }
 
-  // Group schemas by category
-  const byCategory = schemas.reduce<Record<string, ProviderSchema[]>>((acc, s) => {
-    (acc[s.category] ??= []).push(s);
-    return acc;
-  }, {});
-
-  const pageHeader = (
-    <PageHeader
-      title="Platform Settings"
-      description="Deployment-wide defaults for all organisations on this instance."
-    />
-  );
-
-  if (isLoading) {
-    return (
-      <div className="h-full flex flex-col overflow-hidden">
-        {pageHeader}
-        <PageBody>
-          <div className="max-w-3xl space-y-8">
-            <div className="h-16 rounded-xl border border-border bg-muted/40 animate-pulse" />
-            {[...Array(2)].map((_, i) => (
-              <div key={i} className="space-y-3">
-                <div className="h-4 w-28 bg-muted rounded animate-pulse" />
-                {[...Array(2)].map((_, j) => (
-                  <div key={j} className="h-16 rounded-xl bg-muted animate-pulse" />
-                ))}
-              </div>
-            ))}
-          </div>
-        </PageBody>
-      </div>
-    );
-  }
+  const tabSchemas = schemas.filter((s) => s.category === activeTab);
+  const activeTabDef = TABS.find((t) => t.id === activeTab);
 
   return (
     <>
       <div className="h-full flex flex-col overflow-hidden">
-        {pageHeader}
-        <PageBody>
-          <div className="max-w-3xl space-y-10">
-            <EnvCallout />
-            {Object.entries(byCategory).map(([category, categorySchemas]) => (
-              <Section
-                key={category}
-                title={CATEGORY_LABELS[category] ?? category}
-                description={CATEGORY_DESCRIPTIONS[category] ?? ""}
+        <PageHeader
+          title="Platform Settings"
+          description="Deployment-wide defaults — configure once here instead of editing .env files. Org Integrations always take priority."
+        />
+
+        {/* Tab bar */}
+        <div className="shrink-0 border-b border-border bg-background">
+          <div className="max-w-[1600px] mx-auto px-8 flex gap-0">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setTab(tab.id)}
+                className={cn(
+                  "px-4 py-3 text-sm font-medium border-b-2 transition-colors -mb-px",
+                  activeTab === tab.id
+                    ? "border-primary text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
               >
-                {categorySchemas.map((schema) => (
-                  <ProviderRow
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <PageBody>
+          <div className="max-w-4xl space-y-6">
+            {/* Tab description */}
+            {activeTabDef && (
+              <p className="text-sm text-muted-foreground">{activeTabDef.description}</p>
+            )}
+
+            {/* Content */}
+            {isLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-28 rounded-xl bg-muted animate-pulse" />
+                ))}
+              </div>
+            ) : tabSchemas.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">
+                No providers available in this category.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                {tabSchemas.map((schema) => (
+                  <ProviderCard
                     key={schema.provider}
                     schema={schema}
                     config={configByProvider(schema.provider)}
@@ -171,8 +226,8 @@ export function AdminPage() {
                     onDelete={() => deleteMutation.mutate(schema.provider)}
                   />
                 ))}
-              </Section>
-            ))}
+              </div>
+            )}
           </div>
         </PageBody>
       </div>
