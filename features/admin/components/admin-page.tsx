@@ -206,7 +206,7 @@ export function AdminPage() {
         </div>
 
         <PageBody>
-          <div className="max-w-4xl space-y-6">
+          <div className="space-y-6">
             {/* Tab description */}
             {activeTabDef && (
               <p className="text-sm text-muted-foreground">{activeTabDef.description}</p>
