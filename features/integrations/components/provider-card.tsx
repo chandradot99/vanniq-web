@@ -1,16 +1,8 @@
 "use client";
 
-import { CheckCircle2, MoreHorizontal, Unplug, FlaskConical } from "lucide-react";
+import { CheckCircle2, FlaskConical, Unplug } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import type { Integration } from "@/types";
 import { useDeleteIntegration, useTestIntegration } from "../hooks/use-integrations";
 
@@ -39,65 +31,54 @@ export function ProviderCard({ def, integration }: ProviderCardProps) {
   const connectedInfo = accountEmail ?? keyHint;
 
   return (
-    <Card className="group">
-      <CardContent className="p-5">
-        <div className="flex items-start gap-4">
+    <Card className="flex flex-col">
+      <CardContent className="p-5 flex flex-col flex-1 gap-4">
+        {/* Header: logo + name */}
+        <div className="flex items-center gap-3">
           {def.logo}
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-0.5">
-              <span className="font-semibold text-sm">{def.name}</span>
-              {isConnected && (
-                <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">{def.description}</p>
-
-            {isConnected && connectedInfo && (
-              <p className="text-xs text-muted-foreground mt-2 font-mono">
-                {connectedInfo}
-              </p>
-            )}
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-sm">{def.name}</span>
+            {isConnected && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />}
           </div>
+        </div>
 
-          <div className="shrink-0">
+        {/* Description */}
+        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3 flex-1">
+          {def.description}
+        </p>
+
+        {/* Footer: status + actions */}
+        <div className="flex items-center justify-between pt-3 border-t border-border/60">
+          {isConnected ? (
+            <span className="text-xs text-muted-foreground font-mono truncate max-w-[120px]">
+              {connectedInfo ?? "Connected"}
+            </span>
+          ) : (
+            <span className="text-xs text-muted-foreground">Not connected</span>
+          )}
+
+          <div className="flex items-center gap-1.5">
             {isConnected ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5",
-                    "text-xs font-medium shadow-xs hover:bg-accent hover:text-accent-foreground",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    "cursor-pointer transition-colors"
-                  )}
-                >
-                  <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-                  Connected
-                  <MoreHorizontal className="h-3.5 w-3.5 ml-0.5" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-44">
-                  {def.testable && (
-                    <>
-                      <DropdownMenuItem
-                        onClick={() => testMutation.mutate(integration.id)}
-                        disabled={testMutation.isPending}
-                      >
-                        <FlaskConical className="h-3.5 w-3.5 mr-2" />
-                        Test connection
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                    </>
-                  )}
-                  <DropdownMenuItem
-                    className="text-destructive focus:text-destructive"
-                    onClick={() => deleteMutation.mutate(integration.id)}
-                    disabled={deleteMutation.isPending}
+              <>
+                {def.testable && (
+                  <button
+                    onClick={() => testMutation.mutate(integration.id)}
+                    disabled={testMutation.isPending}
+                    title="Test connection"
+                    className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors disabled:opacity-50"
                   >
-                    <Unplug className="h-3.5 w-3.5 mr-2" />
-                    Disconnect
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    <FlaskConical className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                <button
+                  onClick={() => deleteMutation.mutate(integration.id)}
+                  disabled={deleteMutation.isPending}
+                  title="Disconnect"
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                >
+                  <Unplug className="h-3.5 w-3.5" />
+                </button>
+              </>
             ) : (
               <Button size="sm" onClick={def.onConnect}>
                 Connect

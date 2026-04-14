@@ -9,7 +9,7 @@ import { useIntegrations } from "../hooks/use-integrations";
 import { integrationsApi } from "../api";
 import { ProviderCard } from "./provider-card";
 import type { ProviderDef } from "./provider-card";
-import { ApiKeySheet } from "./api-key-sheet";
+import { ApiKeyDialog } from "./api-key-dialog";
 import { cn } from "@/lib/utils";
 import type { Integration } from "@/types";
 
@@ -403,7 +403,7 @@ export function IntegrationsPage() {
         )}
       </PageBody>
 
-      <ApiKeySheet
+      <ApiKeyDialog
         provider={apiKeyProvider}
         onOpenChange={(open) => !open && setApiKeyProvider(null)}
       />
