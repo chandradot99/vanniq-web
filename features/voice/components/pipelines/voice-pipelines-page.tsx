@@ -11,6 +11,7 @@ import type { PhoneNumber } from "@/types";
 import { AddPipelineDialog } from "./add-pipeline-dialog";
 import { PipelineConfigPanel } from "./pipeline-config-panel";
 import { useAgents } from "@/features/agents/hooks/use-agents";
+import { PageHeader } from "@/components/layout/page-header";
 
 // ── Pipeline Card ─────────────────────────────────────────────────────────────
 
@@ -105,31 +106,31 @@ export function VoicePipelinesPage() {
   const configuringPn = phoneNumbers.find((pn) => pn.id === configuringId) ?? null;
 
   return (
-    <div className="flex h-full overflow-hidden">
-      {/* Main content */}
-      <div className="flex-1 overflow-auto">
-        <div className="max-w-3xl mx-auto px-6 py-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-lg font-semibold">Voice Pipelines</h1>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                Each pipeline connects a phone number to an agent with its own voice settings.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Link
-                href="/voice/calls"
-                className="inline-flex items-center h-8 px-3 rounded-md border border-border text-xs font-medium text-foreground hover:bg-accent transition-colors"
-              >
-                <PhoneCallIcon className="h-3.5 w-3.5 mr-1.5" />
-                Call History
-              </Link>
-              <Button size="sm" onClick={() => setAddOpen(true)}>
-                <Plus className="h-3.5 w-3.5 mr-1.5" />
-                Add Pipeline
-              </Button>
-            </div>
+    <div className="flex flex-col h-full overflow-hidden">
+      <PageHeader
+        title="Voice Pipelines"
+        description="Each pipeline connects a phone number to an agent with its own voice settings."
+        actions={
+          <div className="flex items-center gap-2">
+            <Link
+              href="/voice/calls"
+              className="inline-flex items-center h-8 px-3 rounded-md border border-border text-xs font-medium text-foreground hover:bg-accent transition-colors"
+            >
+              <PhoneCallIcon className="h-3.5 w-3.5 mr-1.5" />
+              Call History
+            </Link>
+            <Button size="sm" onClick={() => setAddOpen(true)}>
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              Add Pipeline
+            </Button>
           </div>
+        }
+      />
+
+      {/* Main content */}
+      <div className="flex flex-1 overflow-hidden">
+      <div className="flex-1 overflow-auto">
+        <div className="max-w-[1600px] mx-auto px-8 py-6">
 
           {isLoading ? (
             <div className="space-y-3">
@@ -188,6 +189,7 @@ export function VoicePipelinesPage() {
         }}
         onCancel={() => setRemovingPn(null)}
       />
+      </div>
     </div>
   );
 }

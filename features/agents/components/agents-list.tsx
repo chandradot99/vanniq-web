@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { Plus, Bot } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { PageHeader } from "@/components/layout/page-header";
+import { PageBody } from "@/components/layout/page-body";
 import { useAgents } from "../hooks/use-agents";
 import { AgentCard } from "./agent-card";
 
@@ -28,55 +30,54 @@ export function AgentsList() {
   const { data: agents = [], isLoading } = useAgents();
 
   return (
-    <div className="p-8 max-w-4xl mx-auto h-full overflow-auto">
-      {/* Page header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Agents</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Build and deploy AI agents for voice, chat, and WhatsApp
-          </p>
-        </div>
-        <Link href="/agents/new" className={buttonVariants()}>
-          <Plus className="h-4 w-4 mr-2" />
-          New agent
-        </Link>
-      </div>
-
-      {/* Loading */}
-      {isLoading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <AgentCardSkeleton key={i} />
-          ))}
-        </div>
-      )}
-
-      {/* Empty state */}
-      {!isLoading && agents.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="h-16 w-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
-            <Bot className="h-8 w-8 text-primary/60" />
-          </div>
-          <h3 className="font-semibold text-base mt-2">No agents yet</h3>
-          <p className="text-sm text-muted-foreground mt-1.5 max-w-xs">
-            Create your first AI agent to handle voice calls, chat, and WhatsApp conversations.
-          </p>
-          <Link href="/agents/new" className={buttonVariants({ className: "mt-6" })}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create your first agent
+    <div className="h-full flex flex-col overflow-hidden">
+      <PageHeader
+        title="Agents"
+        description="Build and deploy AI agents for voice, chat, and WhatsApp."
+        actions={
+          <Link href="/agents/new" className={buttonVariants({ size: "sm" })}>
+            <Plus className="h-3.5 w-3.5 mr-1.5" />
+            New agent
           </Link>
-        </div>
-      )}
+        }
+      />
 
-      {/* Agent grid */}
-      {!isLoading && agents.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {agents.map((agent) => (
-            <AgentCard key={agent.id} agent={agent} />
-          ))}
-        </div>
-      )}
+      <PageBody>
+        {/* Loading */}
+        {isLoading && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <AgentCardSkeleton key={i} />
+            ))}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!isLoading && agents.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <div className="h-16 w-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
+              <Bot className="h-8 w-8 text-primary/60" />
+            </div>
+            <h3 className="font-semibold text-base mt-2">No agents yet</h3>
+            <p className="text-sm text-muted-foreground mt-1.5 max-w-xs">
+              Create your first AI agent to handle voice calls, chat, and WhatsApp conversations.
+            </p>
+            <Link href="/agents/new" className={buttonVariants({ className: "mt-6", size: "sm" })}>
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              Create your first agent
+            </Link>
+          </div>
+        )}
+
+        {/* Agent grid */}
+        {!isLoading && agents.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {agents.map((agent) => (
+              <AgentCard key={agent.id} agent={agent} />
+            ))}
+          </div>
+        )}
+      </PageBody>
     </div>
   );
 }

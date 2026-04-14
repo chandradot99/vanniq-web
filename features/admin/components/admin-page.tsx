@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Settings, CheckCircle, Circle, Trash2 } from "lucide-react";
+import { CheckCircle, Circle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/layout/page-header";
+import { PageBody } from "@/components/layout/page-body";
 import { usePlatformSchemas, usePlatformConfigs, useDeletePlatformConfig } from "../hooks/use-admin";
 import { PlatformConfigSheet } from "./platform-config-sheet";
 import type { ProviderSchema, PlatformConfig } from "@/types";
@@ -103,53 +105,55 @@ export function AdminPage() {
 
   if (isLoading) {
     return (
-      <div className="p-8 max-w-2xl mx-auto space-y-8">
-        {[...Array(2)].map((_, i) => (
-          <div key={i} className="space-y-3">
-            <div className="h-4 w-28 bg-muted rounded animate-pulse" />
-            {[...Array(2)].map((_, j) => (
-              <div key={j} className="h-16 rounded-xl bg-muted animate-pulse" />
+      <div className="h-full flex flex-col overflow-hidden">
+        <PageHeader
+          title="Platform Settings"
+          description="Deployment-wide credentials and service registrations."
+        />
+        <PageBody>
+          <div className="space-y-8">
+            {[...Array(2)].map((_, i) => (
+              <div key={i} className="space-y-3">
+                <div className="h-4 w-28 bg-muted rounded animate-pulse" />
+                {[...Array(2)].map((_, j) => (
+                  <div key={j} className="h-16 rounded-xl bg-muted animate-pulse" />
+                ))}
+              </div>
             ))}
           </div>
-        ))}
+        </PageBody>
       </div>
     );
   }
 
   return (
     <>
-      <div className="p-8 max-w-2xl mx-auto space-y-10 overflow-auto h-full">
-        {/* Header */}
-        <div className="flex items-start gap-3">
-          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-            <Settings className="h-4 w-4 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-xl font-semibold">Platform Settings</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Deployment-wide credentials and service registrations. These apply to all organisations on this instance.
-            </p>
-          </div>
-        </div>
-
-        {/* Sections by category */}
-        {Object.entries(byCategory).map(([category, categorySchemas]) => (
-          <Section
-            key={category}
-            title={CATEGORY_LABELS[category] ?? category}
-            description={CATEGORY_DESCRIPTIONS[category] ?? ""}
-          >
-            {categorySchemas.map((schema) => (
-              <ProviderRow
-                key={schema.provider}
-                schema={schema}
-                config={configByProvider(schema.provider)}
-                onConfigure={() => setActiveSchema(schema)}
-                onDelete={() => deleteMutation.mutate(schema.provider)}
-              />
+      <div className="h-full flex flex-col overflow-hidden">
+        <PageHeader
+          title="Platform Settings"
+          description="Deployment-wide credentials and service registrations. These apply to all organisations on this instance."
+        />
+        <PageBody>
+          <div className="max-w-3xl space-y-10">
+            {Object.entries(byCategory).map(([category, categorySchemas]) => (
+              <Section
+                key={category}
+                title={CATEGORY_LABELS[category] ?? category}
+                description={CATEGORY_DESCRIPTIONS[category] ?? ""}
+              >
+                {categorySchemas.map((schema) => (
+                  <ProviderRow
+                    key={schema.provider}
+                    schema={schema}
+                    config={configByProvider(schema.provider)}
+                    onConfigure={() => setActiveSchema(schema)}
+                    onDelete={() => deleteMutation.mutate(schema.provider)}
+                  />
+                ))}
+              </Section>
             ))}
-          </Section>
-        ))}
+          </div>
+        </PageBody>
       </div>
 
       <PlatformConfigSheet
