@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle, Circle, Trash2 } from "lucide-react";
+import { CheckCircle, Circle, Trash2, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/page-header";
 import { PageBody } from "@/components/layout/page-body";
@@ -11,15 +11,33 @@ import type { ProviderSchema, PlatformConfig } from "@/types";
 
 const CATEGORY_LABELS: Record<string, string> = {
   oauth: "OAuth Apps",
-  voice: "Voice Providers",
+  voice: "Voice & Telephony",
   observability: "Observability",
 };
 
 const CATEGORY_DESCRIPTIONS: Record<string, string> = {
-  oauth: "OAuth app registrations for this deployment. Required before users can connect their Google or Slack accounts via Integrations.",
-  voice: "Default voice provider credentials for this deployment. Used for calls where an organisation has not connected their own credentials via Integrations.",
-  observability: "Monitoring and tracing tools for the platform. Applied globally across all agent runs.",
+  oauth: "OAuth app registrations shared by all organisations on this instance. Required before users can connect Google Calendar, Gmail, or Slack via Integrations.",
+  voice: "Default STT, TTS, and telephony credentials for this instance. All voice calls fall back to these unless an organisation has connected their own provider keys via Integrations.",
+  observability: "Monitoring and tracing applied globally to all agent runs on this instance.",
 };
+
+function EnvCallout() {
+  return (
+    <div className="flex gap-3 p-4 rounded-xl border border-border bg-muted/40">
+      <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+      <div className="space-y-1">
+        <p className="text-sm font-medium">Replaces environment variables</p>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Credentials configured here are applied deployment-wide — no{" "}
+          <code className="font-mono bg-muted px-1 py-0.5 rounded text-[11px]">.env</code> edits
+          required. Organisations can override any credential via{" "}
+          <strong className="text-foreground font-medium">Integrations</strong>; those always take
+          priority over these platform defaults.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function Section({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
   return (
@@ -103,15 +121,20 @@ export function AdminPage() {
     return acc;
   }, {});
 
+  const pageHeader = (
+    <PageHeader
+      title="Platform Settings"
+      description="Deployment-wide defaults for all organisations on this instance."
+    />
+  );
+
   if (isLoading) {
     return (
       <div className="h-full flex flex-col overflow-hidden">
-        <PageHeader
-          title="Platform Settings"
-          description="Deployment-wide credentials and service registrations."
-        />
+        {pageHeader}
         <PageBody>
-          <div className="space-y-8">
+          <div className="max-w-3xl space-y-8">
+            <div className="h-16 rounded-xl border border-border bg-muted/40 animate-pulse" />
             {[...Array(2)].map((_, i) => (
               <div key={i} className="space-y-3">
                 <div className="h-4 w-28 bg-muted rounded animate-pulse" />
@@ -129,12 +152,10 @@ export function AdminPage() {
   return (
     <>
       <div className="h-full flex flex-col overflow-hidden">
-        <PageHeader
-          title="Platform Settings"
-          description="Deployment-wide credentials and service registrations. These apply to all organisations on this instance."
-        />
+        {pageHeader}
         <PageBody>
           <div className="max-w-3xl space-y-10">
+            <EnvCallout />
             {Object.entries(byCategory).map(([category, categorySchemas]) => (
               <Section
                 key={category}
