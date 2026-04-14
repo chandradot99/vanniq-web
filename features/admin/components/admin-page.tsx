@@ -2,21 +2,14 @@
 
 import { useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { CheckCircle2, MoreHorizontal, Settings, Trash2 } from "lucide-react";
+import { CheckCircle2, Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
 import { PageBody } from "@/components/layout/page-body";
 import { cn } from "@/lib/utils";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { usePlatformSchemas, usePlatformConfigs, useDeletePlatformConfig } from "../hooks/use-admin";
-import { PlatformConfigSheet } from "./platform-config-sheet";
+import { PlatformConfigDialog } from "./platform-config-dialog";
 import type { ProviderSchema, PlatformConfig } from "@/types";
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
@@ -112,39 +105,31 @@ function ProviderCard({
             <span className="text-xs text-muted-foreground">Not configured</span>
           )}
 
-          {configured ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                className={cn(
-                  "inline-flex items-center gap-1 rounded-md border border-input bg-background px-2.5 py-1.5",
-                  "text-xs font-medium hover:bg-accent hover:text-accent-foreground",
-                  "focus-visible:outline-none cursor-pointer transition-colors"
-                )}
+          <div className="flex items-center gap-1.5">
+            {configured && (
+              <button
+                onClick={onDelete}
+                title="Remove"
+                className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
               >
-                <Settings className="h-3 w-3" />
-                Manage
-                <MoreHorizontal className="h-3 w-3 ml-0.5" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40">
-                <DropdownMenuItem onClick={onConfigure}>
-                  <Settings className="h-3.5 w-3.5 mr-2" />
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )}
+            <Button
+              size="sm"
+              variant={configured ? "outline" : "default"}
+              onClick={onConfigure}
+            >
+              {configured ? (
+                <>
+                  <Pencil className="h-3 w-3 mr-1.5" />
                   Update
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onClick={onDelete}
-                >
-                  <Trash2 className="h-3.5 w-3.5 mr-2" />
-                  Remove
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Button size="sm" onClick={onConfigure}>
-              Configure
+                </>
+              ) : (
+                "Configure"
+              )}
             </Button>
-          )}
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -240,7 +225,7 @@ export function AdminPage() {
         </PageBody>
       </div>
 
-      <PlatformConfigSheet
+      <PlatformConfigDialog
         key={activeSchema?.provider ?? "none"}
         schema={activeSchema}
         existing={activeSchema ? configByProvider(activeSchema.provider) : undefined}
