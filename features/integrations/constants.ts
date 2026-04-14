@@ -54,18 +54,6 @@ export const PROVIDERS: Record<string, ProviderMeta> = {
     credentialFields: [{ key: "api_key", label: "API Key" }],
     configFields: [],
   },
-  assemblyai: {
-    label: "AssemblyAI",
-    category: "stt",
-    credentialFields: [{ key: "api_key", label: "API Key" }],
-    configFields: [],
-  },
-  sarvam: {
-    label: "Sarvam AI",
-    category: "stt",
-    credentialFields: [{ key: "api_key", label: "API Key" }],
-    configFields: [],
-  },
   // TTS
   elevenlabs: {
     label: "ElevenLabs",
@@ -76,6 +64,13 @@ export const PROVIDERS: Record<string, ProviderMeta> = {
   cartesia: {
     label: "Cartesia",
     category: "tts",
+    credentialFields: [{ key: "api_key", label: "API Key" }],
+    configFields: [],
+  },
+  // STT + TTS (single key covers both)
+  sarvam: {
+    label: "Sarvam AI",
+    category: "voice",
     credentialFields: [{ key: "api_key", label: "API Key" }],
     configFields: [],
   },
@@ -168,6 +163,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   llm: "LLM Providers",
   stt: "Speech to Text",
   tts: "Text to Speech",
+  voice: "Voice (STT + TTS)",
   telephony: "Telephony",
   messaging: "Messaging",
   app: "Apps & Tools",

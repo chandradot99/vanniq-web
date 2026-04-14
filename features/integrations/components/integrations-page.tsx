@@ -69,6 +69,13 @@ function ElevenLabsLogo() {
     </div>
   );
 }
+function SarvamLogo() {
+  return (
+    <div className="w-10 h-10 rounded-lg bg-[#f97316] flex items-center justify-center text-white font-bold text-sm shrink-0">
+      Sa
+    </div>
+  );
+}
 function GoogleLogo() {
   return (
     <div className="w-10 h-10 rounded-lg bg-white border border-border flex items-center justify-center shrink-0">
@@ -224,6 +231,15 @@ export function IntegrationsPage() {
       authType: "apikey",
       testable: false,
       onConnect: () => setApiKeyProvider("elevenlabs"),
+    },
+    {
+      provider: "sarvam",
+      name: "Sarvam AI",
+      description: "STT and TTS for Indian languages — Hindi, Tamil, Telugu, Marathi, Bengali, Gujarati, Kannada, Malayalam.",
+      logo: <SarvamLogo />,
+      authType: "apikey",
+      testable: false,
+      onConnect: () => setApiKeyProvider("sarvam"),
     },
   ];
 
