@@ -147,7 +147,7 @@ pnpm dev         # http://localhost:3000
 
 Backend on port 8000:
 ```bash
-cd ../Naaviq && uv run uvicorn naaviq.server.main:app --reload
+cd ../naaviq-api && uv run uvicorn naaviq.server.main:app --reload
 ```
 
 ---

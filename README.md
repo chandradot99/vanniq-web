@@ -1,6 +1,6 @@
 # Naaviq Web
 
-The frontend for [Naaviq](https://github.com/chandradot99/naaviq) — an open source AI agent platform. Build and deploy agents for voice calls, web chat, and WhatsApp using a visual drag-and-drop graph editor.
+The frontend for [Naaviq](https://github.com/chandradot99/naaviq-api) — an open source AI agent platform. Build and deploy agents for voice calls, web chat, and WhatsApp using a visual drag-and-drop graph editor.
 
 ## Features
 
@@ -25,14 +25,14 @@ The frontend for [Naaviq](https://github.com/chandradot99/naaviq) — an open so
 
 - Node.js 25+ (via [nvm](https://github.com/nvm-sh/nvm))
 - pnpm 10+
-- [Naaviq backend](https://github.com/chandradot99/naaviq) running on port 8000
+- [Naaviq backend](https://github.com/chandradot99/naaviq-api) running on port 8000
 
 ### Setup
 
 ```bash
 # 1. Clone
-git clone git@github.com:chandradot99/vanniq-web.git
-cd vanniq-web
+git clone git@github.com:chandradot99/naaviq-web.git
+cd naaviq-web
 
 # 2. Use correct Node version
 nvm use
@@ -58,7 +58,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Backend
 
-This frontend requires the [Naaviq backend](https://github.com/chandradot99/naaviq). See that repo for setup instructions.
+This frontend requires the [Naaviq backend](https://github.com/chandradot99/naaviq-api). See that repo for setup instructions.
 
 ## License
 
