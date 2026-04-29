@@ -43,7 +43,7 @@ export function RegisterForm() {
     <Card>
       <CardHeader>
         <CardTitle className="text-2xl">Create your account</CardTitle>
-        <CardDescription>Get started with Vaaniq for free</CardDescription>
+        <CardDescription>Get started with Naaviq for free</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">

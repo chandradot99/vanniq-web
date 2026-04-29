@@ -21,6 +21,14 @@ export function usePhoneNumbers(agentId?: string) {
   });
 }
 
+export function usePhoneNumber(id: string) {
+  return useQuery({
+    queryKey: [QK, id],
+    queryFn: () => phoneNumbersApi.getById(id),
+    enabled: !!id,
+  });
+}
+
 export function useAddPhoneNumber() {
   const qc = useQueryClient();
   return useMutation({
@@ -60,6 +68,21 @@ export function useRemovePhoneNumber() {
     },
     onError: (err: Error) => {
       toast.error(err.message || "Failed to remove phone number");
+    },
+  });
+}
+
+export function useUpdatePhoneNumberName() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, friendly_name }: { id: string; friendly_name: string | null }) =>
+      phoneNumbersApi.updateName(id, friendly_name),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [QK] });
+      toast.success("Pipeline renamed");
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Failed to rename pipeline");
     },
   });
 }

@@ -1,9 +1,9 @@
-# VaaniqWeb — CLAUDE.md
+# NaaviqWeb — CLAUDE.md
 
-> Read this at the start of every session. Frontend counterpart to the Vaaniq Python monorepo.
+> Read this at the start of every session. Frontend counterpart to the Naaviq Python monorepo.
 
-**Backend repo:** `github.com/chandradot99/vaaniq` (FastAPI, runs on port 8000)
-**This repo:** `github.com/chandradot99/vaaniq-web` (Next.js, runs on port 3000)
+**Backend repo:** `github.com/chandradot99/naaviq` (FastAPI, runs on port 8000)
+**This repo:** `github.com/chandradot99/naaviq-web` (Next.js, runs on port 3000)
 
 
 ## Tech Stack
@@ -147,7 +147,7 @@ pnpm dev         # http://localhost:3000
 
 Backend on port 8000:
 ```bash
-cd ../Vaaniq && uv run uvicorn vaaniq.server.main:app --reload
+cd ../Naaviq && uv run uvicorn naaviq.server.main:app --reload
 ```
 
 ---

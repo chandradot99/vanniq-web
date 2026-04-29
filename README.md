@@ -1,6 +1,6 @@
-# Vaaniq Web
+# Naaviq Web
 
-The frontend for [Vaaniq](https://github.com/chandradot99/vaaniq) — an open source AI agent platform. Build and deploy agents for voice calls, web chat, and WhatsApp using a visual drag-and-drop graph editor.
+The frontend for [Naaviq](https://github.com/chandradot99/naaviq) — an open source AI agent platform. Build and deploy agents for voice calls, web chat, and WhatsApp using a visual drag-and-drop graph editor.
 
 ## Features
 
@@ -25,7 +25,7 @@ The frontend for [Vaaniq](https://github.com/chandradot99/vaaniq) — an open so
 
 - Node.js 25+ (via [nvm](https://github.com/nvm-sh/nvm))
 - pnpm 10+
-- [Vaaniq backend](https://github.com/chandradot99/vaaniq) running on port 8000
+- [Naaviq backend](https://github.com/chandradot99/naaviq) running on port 8000
 
 ### Setup
 
@@ -54,11 +54,11 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Variable | Default | Description |
 |---|---|---|
-| `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | URL of the Vaaniq backend API |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | URL of the Naaviq backend API |
 
 ## Backend
 
-This frontend requires the [Vaaniq backend](https://github.com/chandradot99/vaaniq). See that repo for setup instructions.
+This frontend requires the [Naaviq backend](https://github.com/chandradot99/naaviq). See that repo for setup instructions.
 
 ## License
 

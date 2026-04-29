@@ -67,6 +67,7 @@ export interface Agent {
   name: string;
   system_prompt: string;
   voice_id: string | null;
+  voice_config: VoiceConfig | null;
   language: string;
   simple_mode: boolean;
   graph_config: GraphConfig | null;
@@ -209,6 +210,39 @@ export interface ToolInfo {
 
 // ── Voice ─────────────────────────────────────────────────────────────────────
 
+export interface VoiceModelInfo {
+  id: string;
+  display_name: string;
+  description: string | null;
+  languages: string[];
+  is_default: boolean;
+  streaming: boolean;
+  category: string | null;
+}
+
+export interface VoiceVoiceInfo {
+  id: string;
+  name: string;
+  preview_url: string | null;
+  gender: string | null;
+  language: string | null;
+  category: string | null;
+  description: string | null;
+}
+
+export interface STTProvider {
+  provider_id: string;
+  display_name: string;
+  languages: string[];
+}
+
+export interface TTSProvider {
+  provider_id: string;
+  display_name: string;
+  supports_voices: boolean;
+  languages: string[];
+}
+
 export interface VoiceConfig {
   language?: string | null;
   stt_provider?: string | null;
@@ -217,6 +251,11 @@ export interface VoiceConfig {
   tts_voice_id?: string | null;
   tts_model?: string | null;
   tts_speed?: number | null;
+  // Emotion / expressiveness (provider-specific)
+  tts_emotion?: string | null;        // Cartesia: e.g. "positivity:high"
+  tts_stability?: number | null;      // ElevenLabs: 0.0–1.0
+  tts_style?: number | null;          // ElevenLabs: 0.0–1.0
+  tts_instructions?: string | null;   // OpenAI gpt-4o-mini-tts: free-form
 }
 
 export interface PhoneNumber {

@@ -89,7 +89,7 @@ export function AppSidebar() {
           <AudioLines className="h-4 w-4" />
         </div>
         {!collapsed && (
-          <span className="font-semibold text-sm tracking-tight flex-1 truncate">Vaaniq</span>
+          <span className="font-semibold text-sm tracking-tight flex-1 truncate">Naaviq</span>
         )}
       </div>
 

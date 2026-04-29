@@ -43,7 +43,7 @@ export function LoginForm() {
     <Card>
       <CardHeader>
         <CardTitle className="text-2xl">Welcome back</CardTitle>
-        <CardDescription>Sign in to your Vaaniq account</CardDescription>
+        <CardDescription>Sign in to your Naaviq account</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">

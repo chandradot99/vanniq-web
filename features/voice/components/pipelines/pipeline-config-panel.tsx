@@ -1,57 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { X, Save } from "lucide-react";
+import { X, Save, Zap, AlertTriangle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { PhoneNumber, VoiceConfig } from "@/types";
+import type { PhoneNumber, VoiceConfig, VoiceModelInfo } from "@/types";
 import { useUpdatePhoneNumberConfig } from "../../hooks/use-phone-numbers";
+import {
+  useSTTProviders,
+  useSTTModels,
+  useTTSProviders,
+  useTTSModels,
+  useTTSVoices,
+} from "../../hooks/use-voice-providers";
+import {
+  isLanguageCompatible,
+  LANGUAGE_RECOMMENDATIONS,
+} from "../../utils/language";
 
-// ── Provider / model options ──────────────────────────────────────────────────
-
-const STT_PROVIDERS = [
-  { value: "", label: "Auto-detect (org default)" },
-  { value: "deepgram", label: "Deepgram" },
-  { value: "openai", label: "OpenAI Whisper" },
-  { value: "sarvam", label: "Sarvam AI (Indian languages)" },
-];
-
-const TTS_PROVIDERS = [
-  { value: "", label: "Auto-detect (org default)" },
-  { value: "cartesia", label: "Cartesia" },
-  { value: "elevenlabs", label: "ElevenLabs" },
-  { value: "sarvam", label: "Sarvam AI (Indian languages)" },
-];
-
-const DEEPGRAM_STT_MODELS = [
-  { value: "", label: "Default (nova-3)" },
-  { value: "nova-3", label: "Nova 3 (latest, browser/WebRTC)" },
-  { value: "nova-2-phonecall", label: "Nova 2 Phone Call (recommended for PSTN)" },
-  { value: "nova-2", label: "Nova 2" },
-  { value: "nova-2-finance", label: "Nova 2 Finance" },
-  { value: "enhanced", label: "Enhanced" },
-  { value: "base", label: "Base" },
-];
-
-const CARTESIA_MODELS = [
-  { value: "", label: "Default" },
-  { value: "sonic-2", label: "Sonic 2 (latest)" },
-  { value: "sonic-english", label: "Sonic English" },
-  { value: "sonic-multilingual", label: "Sonic Multilingual" },
-];
-
-const ELEVENLABS_MODELS = [
-  { value: "", label: "Default" },
-  { value: "eleven_turbo_v2_5", label: "Turbo v2.5 (fastest)" },
-  { value: "eleven_turbo_v2", label: "Turbo v2" },
-  { value: "eleven_multilingual_v2", label: "Multilingual v2" },
-];
-
-const OPENAI_STT_MODELS = [
-  { value: "", label: "Default (gpt-4o-mini-transcribe)" },
-  { value: "gpt-4o-mini-transcribe", label: "GPT-4o Mini Transcribe (fastest)" },
-  { value: "gpt-4o-transcribe", label: "GPT-4o Transcribe (most accurate)" },
-  { value: "whisper-1", label: "Whisper 1 (stable)" },
-];
+// ── Static options ────────────────────────────────────────────────────────────
 
 const LANGUAGES = [
   { value: "", label: "Use agent language" },
@@ -74,6 +40,22 @@ const LANGUAGES = [
   { value: "zh-CN", label: "Chinese (Mandarin)" },
 ];
 
+// Cartesia emotion presets
+const CARTESIA_EMOTIONS = [
+  { value: "", label: "None (neutral)" },
+  { value: "positivity:high",   label: "Positive — high" },
+  { value: "positivity:medium", label: "Positive — medium" },
+  { value: "positivity:low",    label: "Positive — low" },
+  { value: "curiosity:high",    label: "Curious — high" },
+  { value: "curiosity:medium",  label: "Curious — medium" },
+  { value: "surprise:high",     label: "Surprised — high" },
+  { value: "surprise:medium",   label: "Surprised — medium" },
+  { value: "sadness:high",      label: "Sad — high" },
+  { value: "sadness:medium",    label: "Sad — medium" },
+  { value: "anger:medium",      label: "Angry — medium" },
+  { value: "negativity:medium", label: "Negative — medium" },
+];
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 type FormState = Required<VoiceConfig>;
@@ -87,6 +69,10 @@ function toFormState(vc: VoiceConfig | null): FormState {
     tts_voice_id: vc?.tts_voice_id ?? "",
     tts_model: vc?.tts_model ?? "",
     tts_speed: vc?.tts_speed ?? null,
+    tts_emotion: vc?.tts_emotion ?? "",
+    tts_stability: vc?.tts_stability ?? null,
+    tts_style: vc?.tts_style ?? null,
+    tts_instructions: vc?.tts_instructions ?? "",
   };
 }
 
@@ -99,7 +85,15 @@ function toPayload(form: FormState): VoiceConfig {
     tts_voice_id: form.tts_voice_id || null,
     tts_model: form.tts_model || null,
     tts_speed: form.tts_speed ?? null,
+    tts_emotion: form.tts_emotion || null,
+    tts_stability: form.tts_stability ?? null,
+    tts_style: form.tts_style ?? null,
+    tts_instructions: form.tts_instructions || null,
   };
+}
+
+function modelLabel(m: VoiceModelInfo) {
+  return m.is_default ? `${m.display_name} (default)` : m.display_name;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -113,6 +107,41 @@ export function PipelineConfigPanel({ phoneNumber, onClose }: Props) {
   const [form, setForm] = useState<FormState>(() => toFormState(phoneNumber.voice_config));
   const updateConfig = useUpdatePhoneNumberConfig();
 
+  // Provider lists
+  const { data: sttProviders = [] } = useSTTProviders();
+  const { data: ttsProviders = [] } = useTTSProviders();
+
+  // Models — fetched when a provider is selected
+  const { data: rawSttModels = [] } = useSTTModels(form.stt_provider || null);
+  const { data: rawTtsModels = [] } = useTTSModels(form.tts_provider || null);
+
+  // Voices — only for providers that support them
+  const ttsProviderMeta = ttsProviders.find((p) => p.provider_id === form.tts_provider);
+  const supportsVoices = ttsProviderMeta?.supports_voices ?? false;
+  const { data: ttsVoices = [] } = useTTSVoices(form.tts_provider || null, supportsVoices);
+
+  // Language-based filtering
+  const activeLang = form.language || "";
+  const sttModels = rawSttModels.filter((m) =>
+    isLanguageCompatible(m.languages, activeLang)
+  );
+  const ttsModels = rawTtsModels.filter((m) =>
+    isLanguageCompatible(m.languages, activeLang)
+  );
+
+  // Streaming state
+  const selectedSttModel = rawSttModels.find((m) => m.id === form.stt_model);
+  const selectedTtsModel = rawTtsModels.find((m) => m.id === form.tts_model);
+  const sttNonStreaming = !!selectedSttModel && !selectedSttModel.streaming;
+  const ttsNonStreaming = !!selectedTtsModel && !selectedTtsModel.streaming;
+
+  // Smart suggestion
+  const recommendation = LANGUAGE_RECOMMENDATIONS[activeLang] ?? null;
+  const showSuggestion = recommendation !== null && !form.stt_provider && !form.tts_provider;
+
+  // Sarvam voice is configured at agent level, not per-number
+  const ttsVoiceIsAgentLevel = form.tts_provider === "sarvam";
+
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => {
       const next = { ...prev, [key]: value };
@@ -122,31 +151,24 @@ export function PipelineConfigPanel({ phoneNumber, onClose }: Props) {
     });
   }
 
+  function applyRecommendation() {
+    if (!recommendation) return;
+    setForm((prev) => ({
+      ...prev,
+      stt_provider: recommendation.stt_provider,
+      stt_model: recommendation.stt_model,
+      tts_provider: recommendation.tts_provider,
+      tts_model: recommendation.tts_model,
+      tts_voice_id: recommendation.tts_voice_id ?? "",
+    }));
+  }
+
   function handleSave() {
     updateConfig.mutate(
       { id: phoneNumber.id, voice_config: toPayload(form) },
       { onSuccess: onClose },
     );
   }
-
-  // No supported TTS provider currently exposes a fixed voice dropdown
-  // (Cartesia/ElevenLabs use free-text voice IDs; Sarvam has no per-number voice)
-  const ttsVoiceOptions = null;
-
-  // Providers that expose a model dropdown
-  const ttsModelOptions =
-    form.tts_provider === "cartesia" ? CARTESIA_MODELS :
-    form.tts_provider === "elevenlabs" ? ELEVENLABS_MODELS :
-    null;
-
-  // Providers where voice is configured via the agent, not per-number (no voice field)
-  const ttsVoiceIsAgentLevel = form.tts_provider === "sarvam";
-
-  // Providers that expose an STT model dropdown
-  const sttModelOptions =
-    form.stt_provider === "deepgram" ? DEEPGRAM_STT_MODELS :
-    form.stt_provider === "openai" ? OPENAI_STT_MODELS :
-    null;
 
   return (
     <div className="w-80 border-l border-border bg-card h-full flex flex-col">
@@ -173,6 +195,27 @@ export function PipelineConfigPanel({ phoneNumber, onClose }: Props) {
           </select>
         </div>
 
+        {/* Smart suggestion */}
+        {showSuggestion && activeLang && (
+          <div className="rounded-md border border-blue-200 bg-blue-50 p-2.5">
+            <div className="flex items-start gap-2">
+              <Sparkles className="h-3.5 w-3.5 text-blue-500 mt-0.5 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-medium text-blue-800">Recommended</p>
+                <p className="text-[11px] text-blue-700 leading-snug">
+                  {recommendation!.rationale}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={applyRecommendation}
+              className="mt-1.5 text-[11px] font-medium text-blue-700 hover:text-blue-900"
+            >
+              Apply suggestion →
+            </button>
+          </div>
+        )}
+
         {/* STT */}
         <div>
           <p className="text-xs font-semibold mb-2 text-muted-foreground uppercase tracking-wide">STT</p>
@@ -184,10 +227,13 @@ export function PipelineConfigPanel({ phoneNumber, onClose }: Props) {
                 onChange={(e) => set("stt_provider", e.target.value)}
                 className="w-full h-8 rounded-md border border-input bg-background px-2 text-xs"
               >
-                {STT_PROVIDERS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                <option value="">Auto-detect (org default)</option>
+                {sttProviders.map((p) => (
+                  <option key={p.provider_id} value={p.provider_id}>{p.display_name}</option>
+                ))}
               </select>
             </div>
-            {sttModelOptions && (
+            {form.stt_provider && sttModels.length > 0 && (
               <div>
                 <label className="text-xs text-muted-foreground block mb-1">Model</label>
                 <select
@@ -195,8 +241,24 @@ export function PipelineConfigPanel({ phoneNumber, onClose }: Props) {
                   onChange={(e) => set("stt_model", e.target.value)}
                   className="w-full h-8 rounded-md border border-input bg-background px-2 text-xs"
                 >
-                  {sttModelOptions.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+                  <option value="">Default</option>
+                  {sttModels.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {modelLabel(m)}{!m.streaming ? " ⚠" : ""}
+                    </option>
+                  ))}
                 </select>
+                {form.stt_model && selectedSttModel?.streaming && (
+                  <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-600 mt-1">
+                    <Zap className="h-2.5 w-2.5" /> Real-time
+                  </span>
+                )}
+                {sttNonStreaming && (
+                  <p className="flex items-center gap-1 text-[11px] text-amber-600 mt-1">
+                    <AlertTriangle className="h-3 w-3 shrink-0" />
+                    Batch only — not for live calls
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -213,11 +275,15 @@ export function PipelineConfigPanel({ phoneNumber, onClose }: Props) {
                 onChange={(e) => set("tts_provider", e.target.value)}
                 className="w-full h-8 rounded-md border border-input bg-background px-2 text-xs"
               >
-                {TTS_PROVIDERS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                <option value="">Auto-detect (org default)</option>
+                {ttsProviders.map((p) => (
+                  <option key={p.provider_id} value={p.provider_id}>{p.display_name}</option>
+                ))}
               </select>
             </div>
 
-            {ttsVoiceOptions && (
+            {/* Voice — dropdown if provider exposes voices */}
+            {supportsVoices && !ttsVoiceIsAgentLevel && (
               <div>
                 <label className="text-xs text-muted-foreground block mb-1">Voice</label>
                 <select
@@ -225,12 +291,18 @@ export function PipelineConfigPanel({ phoneNumber, onClose }: Props) {
                   onChange={(e) => set("tts_voice_id", e.target.value)}
                   className="w-full h-8 rounded-md border border-input bg-background px-2 text-xs"
                 >
-                  {ttsVoiceOptions.map((v) => <option key={v.value} value={v.value}>{v.label}</option>)}
+                  <option value="">Default</option>
+                  {ttsVoices.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.name}{v.gender ? ` (${v.gender})` : ""}
+                    </option>
+                  ))}
                 </select>
               </div>
             )}
 
-            {!ttsVoiceOptions && form.tts_provider && !ttsVoiceIsAgentLevel && (
+            {/* Voice ID — free-text for providers without a voices API */}
+            {form.tts_provider && !supportsVoices && !ttsVoiceIsAgentLevel && (
               <div>
                 <label className="text-xs text-muted-foreground block mb-1">Voice ID</label>
                 <input
@@ -243,7 +315,7 @@ export function PipelineConfigPanel({ phoneNumber, onClose }: Props) {
               </div>
             )}
 
-            {ttsModelOptions && (
+            {form.tts_provider && ttsModels.length > 0 && (
               <div>
                 <label className="text-xs text-muted-foreground block mb-1">Model</label>
                 <select
@@ -251,8 +323,24 @@ export function PipelineConfigPanel({ phoneNumber, onClose }: Props) {
                   onChange={(e) => set("tts_model", e.target.value)}
                   className="w-full h-8 rounded-md border border-input bg-background px-2 text-xs"
                 >
-                  {ttsModelOptions.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+                  <option value="">Default</option>
+                  {ttsModels.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {modelLabel(m)}{!m.streaming ? " ⚠" : ""}
+                    </option>
+                  ))}
                 </select>
+                {form.tts_model && selectedTtsModel?.streaming && (
+                  <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-600 mt-1">
+                    <Zap className="h-2.5 w-2.5" /> Real-time
+                  </span>
+                )}
+                {ttsNonStreaming && (
+                  <p className="flex items-center gap-1 text-[11px] text-amber-600 mt-1">
+                    <AlertTriangle className="h-3 w-3 shrink-0" />
+                    Batch only — not for live calls
+                  </p>
+                )}
               </div>
             )}
 
@@ -269,8 +357,78 @@ export function PipelineConfigPanel({ phoneNumber, onClose }: Props) {
                 />
               </div>
             )}
+
+            {ttsVoiceIsAgentLevel && (
+              <p className="text-[11px] text-muted-foreground">
+                Sarvam voice is set automatically based on language.
+              </p>
+            )}
           </div>
         </div>
+
+        {/* Emotion / Expressiveness */}
+        {form.tts_provider && (form.tts_provider === "cartesia" || form.tts_provider === "elevenlabs" || form.tts_provider === "openai") && (
+          <div>
+            <p className="text-xs font-semibold mb-2 text-muted-foreground uppercase tracking-wide">Expressiveness</p>
+            <div className="space-y-2">
+
+              {form.tts_provider === "cartesia" && (
+                <div>
+                  <label className="text-xs text-muted-foreground block mb-1">Emotion</label>
+                  <select
+                    value={form.tts_emotion ?? ""}
+                    onChange={(e) => set("tts_emotion", e.target.value)}
+                    className="w-full h-8 rounded-md border border-input bg-background px-2 text-xs"
+                  >
+                    {CARTESIA_EMOTIONS.map((e) => (
+                      <option key={e.value} value={e.value}>{e.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {form.tts_provider === "elevenlabs" && (
+                <>
+                  <div>
+                    <label className="text-xs text-muted-foreground block mb-1">Stability (0–1)</label>
+                    <input
+                      type="number"
+                      min={0} max={1} step={0.05}
+                      value={form.tts_stability ?? ""}
+                      onChange={(e) => set("tts_stability", e.target.value ? parseFloat(e.target.value) : null)}
+                      placeholder="0.5"
+                      className="w-full h-8 rounded-md border border-input bg-background px-2 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground block mb-1">Style (0–1)</label>
+                    <input
+                      type="number"
+                      min={0} max={1} step={0.05}
+                      value={form.tts_style ?? ""}
+                      onChange={(e) => set("tts_style", e.target.value ? parseFloat(e.target.value) : null)}
+                      placeholder="0.0"
+                      className="w-full h-8 rounded-md border border-input bg-background px-2 text-xs"
+                    />
+                  </div>
+                </>
+              )}
+
+              {form.tts_provider === "openai" && (
+                <div>
+                  <label className="text-xs text-muted-foreground block mb-1">Instructions</label>
+                  <textarea
+                    rows={3}
+                    value={form.tts_instructions ?? ""}
+                    onChange={(e) => set("tts_instructions", e.target.value)}
+                    placeholder="e.g. Speak warmly and with gentle enthusiasm."
+                    className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs resize-none"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="p-4 border-t border-border shrink-0">

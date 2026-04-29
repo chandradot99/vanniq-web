@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import type { Agent, GraphNode, GraphEdge, Guard, SessionListResponse, SessionDetail, SessionTimeline } from "@/types";
+import type { Agent, GraphNode, GraphEdge, Guard, SessionListResponse, SessionDetail, SessionTimeline, VoiceConfig } from "@/types";
 
 export interface CreateAgentInput {
   name: string;
@@ -71,4 +71,7 @@ export const agentsApi = {
   delete: (id: string): Promise<void> => api.delete(`/v1/agents/${id}`),
   startVoicePreview: (id: string): Promise<VoicePreviewResponse> =>
     api.post(`/v1/agents/${id}/voice-preview`),
+
+  updateVoiceConfig: (id: string, voice_config: VoiceConfig | null): Promise<Agent> =>
+    api.patch(`/v1/agents/${id}/voice-config`, { voice_config }),
 };

@@ -89,7 +89,7 @@ export function NodePalette() {
   const [collapsed, setCollapsed] = useState(false);
 
   function onDragStart(e: React.DragEvent, nodeType: NodeType) {
-    e.dataTransfer.setData("application/vaaniq-node-type", nodeType);
+    e.dataTransfer.setData("application/naaviq-node-type", nodeType);
     e.dataTransfer.effectAllowed = "move";
   }
 

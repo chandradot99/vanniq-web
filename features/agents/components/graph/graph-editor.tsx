@@ -179,7 +179,7 @@ function GraphEditorInner({ agent }: GraphEditorInnerProps) {
   const onDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
-      const nodeType = e.dataTransfer.getData("application/vaaniq-node-type") as NodeType;
+      const nodeType = e.dataTransfer.getData("application/naaviq-node-type") as NodeType;
       if (!nodeType) return;
 
       const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });

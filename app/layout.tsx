@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Vaaniq — AI Agent Platform",
+  title: "Naaviq — AI Agent Platform",
   description: "Build and deploy AI agents for voice, chat, and WhatsApp.",
 };
 

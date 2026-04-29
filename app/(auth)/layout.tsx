@@ -27,7 +27,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <AudioLines className="h-5 w-5" />
           </div>
-          <span className="font-semibold text-lg tracking-tight">Vaaniq</span>
+          <span className="font-semibold text-lg tracking-tight">Naaviq</span>
         </div>
 
         {children}

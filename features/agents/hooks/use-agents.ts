@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ApiError } from "@/lib/api";
-import type { Agent } from "@/types";
+import type { Agent, VoiceConfig } from "@/types";
 import { agentsApi, sessionsApi, type CreateAgentInput, type UpdateAgentInput, type UpdateGraphInput } from "../api";
 
 export function useAgents() {
@@ -79,6 +79,19 @@ export function useSessionTimeline(sessionId: string | null) {
     queryKey: ["session-timeline", sessionId],
     queryFn: () => sessionsApi.getTimeline(sessionId!),
     enabled: !!sessionId,
+  });
+}
+
+export function useUpdateVoiceConfig(agentId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (voice_config: VoiceConfig | null) =>
+      agentsApi.updateVoiceConfig(agentId, voice_config),
+    onSuccess: (updated) => {
+      qc.setQueryData(["agents", agentId], updated);
+      toast.success("Voice settings saved");
+    },
+    onError: () => toast.error("Failed to save voice settings"),
   });
 }
 

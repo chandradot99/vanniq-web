@@ -47,7 +47,7 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: () => !!get().accessToken,
     }),
     {
-      name: "vaaniq-auth",
+      name: "naaviq-auth",
       partialize: (state) => ({
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
